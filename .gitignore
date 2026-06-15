@@ -1,0 +1,28 @@
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# .NET build output
+bin/
+obj/
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+
+# Logs
+Samsary.Api/Logs/
+*.log
+ng-create.log
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Secrets
+*.env
+appsettings.Local.json

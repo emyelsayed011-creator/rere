@@ -1,0 +1,58 @@
+import { Injectable, inject, signal } from '@angular/core';
+import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
+import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
+import { ChatMessage, NotificationItem } from './models';
+
+@Injectable({ providedIn: 'root' })
+export class RealtimeService {
+  private auth = inject(AuthService);
+  private chat?: HubConnection;
+  private notif?: HubConnection;
+
+  readonly latestMessage = signal<ChatMessage | null>(null);
+  readonly latestNotification = signal<NotificationItem | null>(null);
+  readonly unreadDelta = signal(0);
+
+  async connect() {
+    const token = this.auth.token();
+    if (!token) return;
+    if (!this.chat) {
+      this.chat = new HubConnectionBuilder()
+        .withUrl(`${environment.hubBase}/chat`, { accessTokenFactory: () => token })
+        .withAutomaticReconnect()
+        .configureLogging(LogLevel.Warning)
+        .build();
+      this.chat.on('receiveMessage', (m: ChatMessage) => this.latestMessage.set(m));
+      this.chat.on('messageSent',    (m: ChatMessage) => this.latestMessage.set(m));
+      this.chat.on('messageRead', () => { /* receiver can update */ });
+      await this.chat.start();
+    }
+    if (!this.notif) {
+      this.notif = new HubConnectionBuilder()
+        .withUrl(`${environment.hubBase}/notifications`, { accessTokenFactory: () => token })
+        .withAutomaticReconnect()
+        .configureLogging(LogLevel.Warning)
+        .build();
+      this.notif.on('notify', (n: NotificationItem) => {
+        this.latestNotification.set(n);
+        this.unreadDelta.update(v => v + 1);
+      });
+      await this.notif.start();
+    }
+  }
+
+  async sendMessage(receiverId: string, body: string, relatedListingId?: number) {
+    if (!this.chat) await this.connect();
+    await this.chat?.invoke('SendMessage', receiverId, body, relatedListingId ?? null);
+  }
+
+  async markRead(messageId: number) {
+    await this.chat?.invoke('MarkRead', messageId);
+  }
+
+  async disconnect() {
+    await this.chat?.stop(); this.chat = undefined;
+    await this.notif?.stop(); this.notif = undefined;
+  }
+}

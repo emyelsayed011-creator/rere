@@ -1,0 +1,50 @@
+/* Samsary global styles */
+:root {
+  --samsary-primary: #4f46e5;
+  --samsary-accent:  #06b6d4;
+}
+
+.navbar-brand-samsary {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.btn-samsary {
+  background: linear-gradient(135deg, var(--samsary-primary), var(--samsary-accent));
+  color: #fff;
+  border: none;
+}
+.btn-samsary:hover { color: #fff; opacity: .92; }
+
+.listing-card .ratio { background: #f1f3f5; }
+.listing-card .badge-type { position: absolute; top: 10px; left: 10px; }
+
+.chat-thread {
+  height: calc(100vh - 250px);
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--bs-border-color);
+  border-radius: .5rem;
+  padding: 1rem;
+}
+.chat-bubble { max-width: 70%; padding: .6rem .9rem; border-radius: 1rem; margin-bottom: .5rem; }
+.chat-bubble.me   { background: var(--samsary-primary); color:#fff; margin-left: auto; border-bottom-right-radius: .25rem; }
+.chat-bubble.them { background: #e9ecef; margin-right: auto; border-bottom-left-radius: .25rem; }
+
+.notif-dot {
+  position: absolute; top: 4px; right: 4px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #dc3545;
+}
+
+.auth-card {
+  max-width: 460px;
+  margin: 4rem auto;
+}
+
+.sidebar-admin .nav-link {
+  color: var(--bs-body-color);
+  border-radius: .375rem;
+  padding: .6rem .9rem;
+}
+.sidebar-admin .nav-link.active { background: var(--samsary-primary); color: #fff; }
