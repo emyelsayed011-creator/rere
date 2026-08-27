@@ -2,15 +2,16 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
+import { TranslatePipe } from '../../core/i18n.service';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe],
   template: `
     <div class="card auth-card shadow-sm border-0">
       <div class="card-body p-4">
-        <h4 class="mb-3 text-center"><i class="bi bi-person-plus text-primary me-2"></i>Create account</h4>
+        <h4 class="mb-3 text-center fw-bold"><i class="bi bi-person-plus text-primary me-2"></i>{{ 'auth.createAccount' | t }}</h4>
         <form [formGroup]="form" (ngSubmit)="submit()">
           @if (errors().length) {
             <div class="alert alert-danger py-2 small">
@@ -18,25 +19,25 @@ import { AuthService } from '../../core/auth.service';
             </div>
           }
           <div class="mb-3">
-            <label class="form-label">Display name</label>
+            <label class="form-label">{{ 'auth.displayName' | t }}</label>
             <input class="form-control" formControlName="displayName" maxlength="80">
           </div>
           <div class="mb-3">
-            <label class="form-label">Email</label>
+            <label class="form-label">{{ 'auth.email' | t }}</label>
             <input class="form-control" type="email" formControlName="email" autocomplete="email">
           </div>
           <div class="mb-3">
-            <label class="form-label">Password</label>
+            <label class="form-label">{{ 'auth.password' | t }}</label>
             <input class="form-control" type="password" formControlName="password" autocomplete="new-password">
-            <div class="form-text">Min 8 chars, uppercase, digit, symbol.</div>
+            <div class="form-text">{{ 'auth.passwordHint' | t }}</div>
           </div>
           <button class="btn btn-samsary w-100" [disabled]="form.invalid || loading()">
             @if (loading()) { <span class="spinner-border spinner-border-sm me-2"></span> }
-            Create account
+            {{ 'auth.createAccount' | t }}
           </button>
         </form>
         <p class="text-center mt-3 mb-0 small">
-          Have an account? <a routerLink="/login">Sign in</a>
+          {{ 'auth.haveAccount' | t }} <a routerLink="/login">{{ 'auth.signIn' | t }}</a>
         </p>
       </div>
     </div>
@@ -63,7 +64,7 @@ export class RegisterComponent {
       await this.auth.register(v.email, v.password, v.displayName);
       this.router.navigateByUrl('/');
     } catch (e: any) {
-      const msg = e?.error?.errors || [e?.error?.error || 'Registration failed.'];
+      const msg = e?.error?.errors || [e?.error?.detail || e?.error?.error || 'Registration failed.'];
       this.errors.set(Array.isArray(msg) ? msg : [msg]);
     } finally { this.loading.set(false); }
   }

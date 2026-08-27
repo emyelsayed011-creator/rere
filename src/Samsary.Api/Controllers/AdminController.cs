@@ -1,0 +1,60 @@
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Samsary.Application.DTOs;
+using Samsary.Application.Features.Admin.Commands;
+using Samsary.Application.Features.Admin.Queries;
+using Samsary.Infrastructure.Persistence;
+
+namespace Samsary.Api.Controllers;
+
+[Authorize(Roles = SeedData.AdminRole)]
+[Route("api/admin")]
+public class AdminController : ApiControllerBase
+{
+    private readonly ISender _sender;
+
+    public AdminController(ISender sender) => _sender = sender;
+
+    [HttpGet("dashboard")]
+    public async Task<IActionResult> Dashboard(CancellationToken ct)
+        => HandleResult(await _sender.Send(new GetDashboardQuery(), ct));
+
+    [HttpGet("listings/pending")]
+    public async Task<IActionResult> Pending(CancellationToken ct)
+        => HandleResult(await _sender.Send(new GetPendingListingsQuery(), ct));
+
+    [HttpPost("listings/{id:int}/approve")]
+    public async Task<IActionResult> Approve(int id, CancellationToken ct)
+        => HandleResult(await _sender.Send(new ApproveListingCommand(id), ct));
+
+    [HttpPost("listings/{id:int}/reject")]
+    public async Task<IActionResult> Reject(int id, RejectListingDto dto, CancellationToken ct)
+        => HandleResult(await _sender.Send(new RejectListingCommand(id, dto.Reason), ct));
+
+    [HttpGet("users")]
+    public async Task<IActionResult> Users(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 25, CancellationToken ct = default)
+        => HandleResult(await _sender.Send(new GetAdminUsersQuery(page, pageSize), ct));
+
+    [HttpPost("users/{id}/block")]
+    public async Task<IActionResult> Block(string id, [FromQuery] bool block = true, CancellationToken ct = default)
+        => HandleResult(await _sender.Send(new SetUserBlockedCommand(id, block), ct));
+
+    [HttpPost("users/{id}/message")]
+    public async Task<IActionResult> AdminMessage(string id, [FromBody] SendMessageDto dto, CancellationToken ct)
+        => HandleResult(await _sender.Send(new SendAdminMessageCommand(id, dto.Body), ct));
+
+    [HttpGet("logs")]
+    public async Task<IActionResult> Logs(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 50, [FromQuery] string? level = null,
+        CancellationToken ct = default)
+        => HandleResult(await _sender.Send(new GetSystemLogsQuery(page, pageSize, level), ct));
+
+    [HttpPost("listings/create-for-user")]
+    public async Task<IActionResult> CreateListingForUser(AdminCreateListingDto dto, CancellationToken ct)
+        => HandleResult(await _sender.Send(
+            new AdminCreateListingCommand(
+                dto.OwnerId, dto.Title, dto.Description, dto.Price,
+                dto.Currency, dto.Type, dto.CategoryId, dto.Location), ct));
+}

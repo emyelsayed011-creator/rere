@@ -1,20 +1,21 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+﻿import { Component, inject, OnInit, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/api.service';
+import { TranslatePipe, I18nService } from '../../core/i18n.service';
 
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [DatePipe, FormsModule],
+  imports: [DatePipe, FormsModule, TranslatePipe],
   template: `
-    <h4 class="mb-3">Users</h4>
+    <h4 class="mb-3 fw-bold">{{ 'admin.users' | t }}</h4>
     <div class="card border-0 shadow-sm">
       <div class="table-responsive">
         <table class="table mb-0 align-middle">
           <thead class="table-light">
             <tr>
-              <th>Email</th><th>Display</th><th>Joined</th><th>Status</th><th class="text-end">Actions</th>
+              <th>{{ 'admin.colEmail' | t }}</th><th>{{ 'admin.colDisplay' | t }}</th><th>{{ 'admin.colJoined' | t }}</th><th>{{ 'admin.colStatus' | t }}</th><th class="text-end">{{ 'admin.colActions' | t }}</th>
             </tr>
           </thead>
           <tbody>
@@ -24,15 +25,15 @@ import { ApiService } from '../../core/api.service';
                 <td>{{ u.displayName }}</td>
                 <td>{{ u.createdAt | date:'short' }}</td>
                 <td>
-                  @if (u.isBlocked) { <span class="badge bg-danger">Blocked</span> }
-                  @else { <span class="badge bg-success">Active</span> }
+                  @if (u.isBlocked) { <span class="badge bg-danger">{{ 'admin.blocked' | t }}</span> }
+                  @else { <span class="badge bg-success">{{ 'admin.active' | t }}</span> }
                 </td>
                 <td class="text-end">
                   <button class="btn btn-sm btn-outline-secondary me-1" (click)="openMessage(u)">
                     <i class="bi bi-envelope"></i>
                   </button>
                   <button class="btn btn-sm" [class.btn-outline-danger]="!u.isBlocked" [class.btn-success]="u.isBlocked" (click)="toggleBlock(u)">
-                    {{ u.isBlocked ? 'Unblock' : 'Block' }}
+                    {{ (u.isBlocked ? 'admin.unblock' : 'admin.block') | t }}
                   </button>
                 </td>
               </tr>
@@ -47,7 +48,7 @@ import { ApiService } from '../../core/api.service';
         <li class="page-item" [class.disabled]="page() === 1">
           <button class="page-link" (click)="go(page() - 1)">«</button>
         </li>
-        <li class="page-item disabled"><span class="page-link">Page {{ page() }}</span></li>
+        <li class="page-item disabled"><span class="page-link">{{ 'common.page' | t }} {{ page() }}</span></li>
         <li class="page-item" [class.disabled]="items().length < pageSize">
           <button class="page-link" (click)="go(page() + 1)">»</button>
         </li>
@@ -60,16 +61,16 @@ import { ApiService } from '../../core/api.service';
         <div class="modal-dialog">
           <div class="modal-content">
             <div class="modal-header">
-              <h5 class="modal-title">Message {{ u.displayName }}</h5>
+              <h5 class="modal-title">{{ 'admin.messageUser' | t }} {{ u.displayName }}</h5>
               <button class="btn-close" (click)="msgUser.set(null)"></button>
             </div>
             <div class="modal-body">
-              <textarea class="form-control" rows="4" [(ngModel)]="messageBody" placeholder="Write a message…"></textarea>
+              <textarea class="form-control" rows="4" [(ngModel)]="messageBody" [placeholder]="'admin.writeMessage' | t"></textarea>
               @if (msgFeedback()) { <div class="small mt-2" [class.text-success]="msgOk()" [class.text-danger]="!msgOk()">{{ msgFeedback() }}</div> }
             </div>
             <div class="modal-footer">
-              <button class="btn btn-light" (click)="msgUser.set(null)">Cancel</button>
-              <button class="btn btn-samsary" (click)="sendMessage(u.id)" [disabled]="!messageBody.trim()">Send</button>
+              <button class="btn btn-light" (click)="msgUser.set(null)">{{ 'common.cancel' | t }}</button>
+              <button class="btn btn-samsary" (click)="sendMessage(u.id)" [disabled]="!messageBody.trim()">{{ 'common.send' | t }}</button>
             </div>
           </div>
         </div>
@@ -79,6 +80,7 @@ import { ApiService } from '../../core/api.service';
 })
 export class AdminUsersComponent implements OnInit {
   private api = inject(ApiService);
+  private i18n = inject(I18nService);
   items = signal<any[]>([]);
   page = signal(1);
   pageSize = 25;
@@ -94,8 +96,8 @@ export class AdminUsersComponent implements OnInit {
   openMessage(u: any) { this.msgUser.set(u); this.messageBody = ''; this.msgFeedback.set(null); }
   sendMessage(id: string) {
     this.api.adminMessage(id, this.messageBody.trim()).subscribe({
-      next: () => { this.msgOk.set(true); this.msgFeedback.set('Sent.'); setTimeout(() => this.msgUser.set(null), 800); },
-      error: () => { this.msgOk.set(false); this.msgFeedback.set('Failed.'); }
+      next: () => { this.msgOk.set(true); this.msgFeedback.set(this.i18n.t('admin.sent')); setTimeout(() => this.msgUser.set(null), 800); },
+      error: () => { this.msgOk.set(false); this.msgFeedback.set(this.i18n.t('common.failed')); }
     });
   }
 }

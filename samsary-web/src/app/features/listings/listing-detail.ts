@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+﻿import { Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -6,14 +6,15 @@ import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { RealtimeService } from '../../core/realtime.service';
 import { Listing, MediaType } from '../../core/models';
+import { I18nService, TranslatePipe } from '../../core/i18n.service';
 
 @Component({
   selector: 'app-listing-detail',
   standalone: true,
-  imports: [RouterLink, FormsModule, DatePipe, DecimalPipe],
+  imports: [RouterLink, FormsModule, DatePipe, DecimalPipe, TranslatePipe],
   template: `
     @if (l(); as l) {
-      <div class="row g-4">
+      <div class="row g-4 animate-fade-up">
         <div class="col-lg-8">
           <div class="card border-0 shadow-sm overflow-hidden">
             @if (l.media.length) {
@@ -50,11 +51,11 @@ import { Listing, MediaType } from '../../core/models';
                   <div class="text-muted small">
                     <i class="bi bi-tag"></i> {{ l.category.name }} ·
                     <i class="bi bi-geo-alt"></i> {{ l.location || '—' }} ·
-                    Posted {{ l.createdAt | date:'medium' }}
+                    {{ 'detail.posted' | t }} {{ l.createdAt | date:'medium' }}
                   </div>
                 </div>
-                <span class="badge fs-6" [class.bg-success]="l.type===1" [class.bg-info]="l.type===2">
-                  {{ l.type === 1 ? 'For sale' : 'For rent' }}
+                <span class="badge fs-6 text-white" [class.bg-success]="l.type===1" [class.bg-info]="l.type===2">
+                  {{ (l.type === 1 ? 'common.sale' : 'common.rent') | t }}
                 </span>
               </div>
               <h4 class="text-primary fw-bold mt-3 mb-3">{{ l.price | number }} {{ l.currency }}</h4>
@@ -66,7 +67,7 @@ import { Listing, MediaType } from '../../core/models';
         <div class="col-lg-4">
           <div class="card border-0 shadow-sm">
             <div class="card-body">
-              <h6 class="mb-3">Seller</h6>
+              <h6 class="mb-3 fw-bold">{{ 'detail.seller' | t }}</h6>
               <div class="d-flex align-items-center mb-3">
                 @if (l.ownerAvatarUrl) {
                   <img [src]="l.ownerAvatarUrl" class="rounded-circle me-2" width="48" height="48" alt="">
@@ -79,21 +80,21 @@ import { Listing, MediaType } from '../../core/models';
               </div>
 
               @if (auth.isAuthenticated() && auth.user()?.id !== l.ownerId) {
-                <textarea class="form-control mb-2" rows="3" [(ngModel)]="message" placeholder="Write a message…"></textarea>
+                <textarea class="form-control mb-2" rows="3" [(ngModel)]="message" [placeholder]="'detail.writeMessage' | t"></textarea>
                 <button class="btn btn-samsary w-100" (click)="sendMessage(l.ownerId, l.id)" [disabled]="!message.trim() || sending()">
                   @if (sending()) { <span class="spinner-border spinner-border-sm me-2"></span> }
-                  <i class="bi bi-chat-dots me-1"></i> Contact seller
+                  <i class="bi bi-chat-dots me-1"></i> {{ 'detail.contactSeller' | t }}
                 </button>
               } @else if (!auth.isAuthenticated()) {
-                <a routerLink="/login" class="btn btn-outline-primary w-100">Sign in to contact</a>
+                <a routerLink="/login" class="btn btn-outline-primary w-100">{{ 'detail.signInToContact' | t }}</a>
               }
 
               @if (auth.user()?.id === l.ownerId) {
                 <a [routerLink]="['/listings', l.id, 'edit']" class="btn btn-outline-primary w-100 mb-2">
-                  <i class="bi bi-pencil"></i> Edit
+                  <i class="bi bi-pencil"></i> {{ 'common.edit' | t }}
                 </a>
                 <button class="btn btn-outline-danger w-100" (click)="remove(l.id)">
-                  <i class="bi bi-trash"></i> Delete
+                  <i class="bi bi-trash"></i> {{ 'common.delete' | t }}
                 </button>
               }
             </div>
@@ -108,6 +109,7 @@ export class ListingDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private rt = inject(RealtimeService);
+  private i18n = inject(I18nService);
   auth = inject(AuthService);
 
   l = signal<Listing | null>(null);
@@ -131,7 +133,7 @@ export class ListingDetailComponent implements OnInit {
   }
 
   remove(id: number) {
-    if (!confirm('Delete this listing?')) return;
+    if (!confirm(this.i18n.t('detail.confirmDelete'))) return;
     this.api.deleteListing(id).subscribe(() => this.router.navigateByUrl('/my-listings'));
   }
 }

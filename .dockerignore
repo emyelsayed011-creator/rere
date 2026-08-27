@@ -1,0 +1,17 @@
+# Keep the API build context small & reproducible (build happens inside the image).
+**/bin/
+**/obj/
+**/.vs/
+.git/
+.gitignore
+.vscode/
+*.user
+
+# The web app is built by its own Dockerfile, not the API one.
+samsary-web/
+
+# Local-only files
+**/.env
+.env
+docker-compose*.yml
+**/*.md

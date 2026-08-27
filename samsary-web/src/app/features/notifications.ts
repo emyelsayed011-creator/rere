@@ -4,19 +4,20 @@ import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { RealtimeService } from '../core/realtime.service';
 import { NotificationItem } from '../core/models';
+import { TranslatePipe } from '../core/i18n.service';
 
 @Component({
   selector: 'app-notifications',
   standalone: true,
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink, TranslatePipe],
   template: `
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <h4 class="mb-0">Notifications</h4>
+      <h4 class="mb-0 fw-bold">{{ 'notif.title' | t }}</h4>
       <button class="btn btn-outline-secondary btn-sm" (click)="markAll()">
-        <i class="bi bi-check2-all"></i> Mark all read
+        <i class="bi bi-check2-all"></i> {{ 'notif.markAll' | t }}
       </button>
     </div>
-    <div class="list-group shadow-sm">
+    <div class="list-group shadow-sm animate-fade-up">
       @for (n of items(); track n.id) {
         <div class="list-group-item d-flex align-items-start" [class.bg-light]="!n.isRead">
           <div class="me-3">
@@ -34,7 +35,7 @@ import { NotificationItem } from '../core/models';
             </div>
             <div class="text-body">{{ n.message }}</div>
             @if (n.link) {
-              <a [routerLink]="n.link" class="small">Open</a>
+              <a [routerLink]="n.link" class="small">{{ 'common.open' | t }}</a>
             }
           </div>
           @if (!n.isRead) {
@@ -44,7 +45,7 @@ import { NotificationItem } from '../core/models';
           }
         </div>
       } @empty {
-        <div class="text-center text-muted py-5">No notifications</div>
+        <div class="text-center text-muted py-5">{{ 'notif.empty' | t }}</div>
       }
     </div>
   `

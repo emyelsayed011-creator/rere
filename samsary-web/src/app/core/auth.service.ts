@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { AuthResponse, AuthUser } from './models';
+import { AuthResponse, AuthUser, ModeratorPermission } from './models';
 
 const TOKEN_KEY = 'samsary.token';
 const USER_KEY  = 'samsary.user';
@@ -17,6 +17,14 @@ export class AuthService {
   readonly token = signal<string | null>(null);
   readonly isAuthenticated = computed(() => !!this.token());
   readonly isAdmin = computed(() => this.user()?.roles.includes('Admin') ?? false);
+  readonly isModerator = computed(() => this.user()?.roles.includes('Moderator') ?? false);
+  readonly isStaff = computed(() => this.isAdmin() || this.isModerator());
+
+  hasPermission(perm: ModeratorPermission): boolean {
+    if (this.isAdmin()) return true;
+    const bits = this.user()?.modPermissions ?? 0;
+    return (bits & perm) === perm;
+  }
 
   bootstrap() {
     const t = localStorage.getItem(TOKEN_KEY);
@@ -56,8 +64,15 @@ export class AuthService {
 
   private persist(r: AuthResponse) {
     localStorage.setItem(TOKEN_KEY, r.token);
-    localStorage.setItem(USER_KEY, JSON.stringify(r.user));
+    // Decode JWT to extract moderator permissions claim
+    const user = { ...r.user };
+    try {
+      const payload = JSON.parse(atob(r.token.split('.')[1]));
+      if (payload['mod_permissions'] !== undefined)
+        user.modPermissions = Number(payload['mod_permissions']);
+    } catch { /* ignore malformed JWT */ }
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
     this.token.set(r.token);
-    this.user.set(r.user);
+    this.user.set(user);
   }
 }

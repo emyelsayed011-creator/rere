@@ -6,11 +6,12 @@ import { ApiService } from '../core/api.service';
 import { AuthService } from '../core/auth.service';
 import { RealtimeService } from '../core/realtime.service';
 import { ChatMessage, Conversation } from '../core/models';
+import { TranslatePipe } from '../core/i18n.service';
 
 @Component({
   selector: 'app-chat',
   standalone: true,
-  imports: [RouterLink, FormsModule, DatePipe],
+  imports: [RouterLink, FormsModule, DatePipe, TranslatePipe],
   template: `
     <div class="row g-3">
       <div class="col-md-4">
@@ -31,7 +32,7 @@ import { ChatMessage, Conversation } from '../core/models';
                 </div>
               </a>
             } @empty {
-              <div class="p-3 text-center text-muted small">No conversations yet.</div>
+              <div class="p-3 text-center text-muted small">{{ 'chat.noConversations' | t }}</div>
             }
           </div>
         </div>
@@ -47,11 +48,11 @@ import { ChatMessage, Conversation } from '../core/models';
                   <div class="small opacity-75 text-end mt-1">{{ m.sentAt | date:'shortTime' }}</div>
                 </div>
               </div>
-            } @empty { <div class="text-muted text-center py-5">Say hello!</div> }
+            } @empty { <div class="text-muted text-center py-5">{{ 'chat.sayHello' | t }}</div> }
           </div>
           <div class="input-group">
             <textarea class="form-control" rows="1" [(ngModel)]="draft"
-              (keydown.enter)="$event.preventDefault(); send()" placeholder="Type a message…"></textarea>
+              (keydown.enter)="$event.preventDefault(); send()" [placeholder]="'chat.typeMessage' | t"></textarea>
             <button class="btn btn-samsary" (click)="send()" [disabled]="!draft.trim()">
               <i class="bi bi-send"></i>
             </button>
@@ -59,7 +60,7 @@ import { ChatMessage, Conversation } from '../core/models';
         } @else {
           <div class="text-muted text-center py-5">
             <i class="bi bi-chat-square-text fs-1"></i>
-            <div class="mt-2">Select a conversation</div>
+            <div class="mt-2">{{ 'chat.selectConversation' | t }}</div>
           </div>
         }
       </div>

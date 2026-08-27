@@ -1,15 +1,16 @@
-import { Component, inject, signal } from '@angular/core';
+﻿import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ApiService } from '../core/api.service';
 import { AuthService } from '../core/auth.service';
+import { TranslatePipe, I18nService } from '../core/i18n.service';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, TranslatePipe],
   template: `
-    <h4 class="mb-3">My profile</h4>
-    <div class="row g-4">
+    <h4 class="mb-3 fw-bold">{{ 'profile.title' | t }}</h4>
+    <div class="row g-4 animate-fade-up">
       <div class="col-md-4">
         <div class="card border-0 shadow-sm text-center">
           <div class="card-body">
@@ -22,7 +23,7 @@ import { AuthService } from '../core/auth.service';
             <div class="text-muted small">{{ auth.user()?.email }}</div>
             <hr>
             <label class="btn btn-outline-primary btn-sm w-100 mb-0">
-              <i class="bi bi-upload me-1"></i> Change avatar
+              <i class="bi bi-upload me-1"></i> {{ 'profile.changeAvatar' | t }}
               <input type="file" hidden accept="image/*" (change)="uploadAvatar($event)">
             </label>
             @if (avatarMsg()) { <div class="small text-success mt-2">{{ avatarMsg() }}</div> }
@@ -33,18 +34,18 @@ import { AuthService } from '../core/auth.service';
       <div class="col-md-8">
         <div class="card border-0 shadow-sm mb-3">
           <div class="card-body">
-            <h6 class="mb-3">Details</h6>
+            <h6 class="mb-3 fw-bold">{{ 'profile.details' | t }}</h6>
             <form [formGroup]="form" (ngSubmit)="save()">
               <div class="mb-3">
-                <label class="form-label">Display name</label>
+                <label class="form-label">{{ 'profile.displayName' | t }}</label>
                 <input class="form-control" formControlName="displayName">
               </div>
               <div class="mb-3">
-                <label class="form-label">Bio</label>
+                <label class="form-label">{{ 'profile.bio' | t }}</label>
                 <textarea class="form-control" rows="3" formControlName="bio"></textarea>
               </div>
               <button class="btn btn-samsary" [disabled]="form.invalid || saving()">
-                @if (saving()) { <span class="spinner-border spinner-border-sm me-2"></span> } Save
+                @if (saving()) { <span class="spinner-border spinner-border-sm me-2"></span> } {{ 'common.save' | t }}
               </button>
               @if (saveMsg()) { <span class="text-success ms-2 small">{{ saveMsg() }}</span> }
             </form>
@@ -53,18 +54,18 @@ import { AuthService } from '../core/auth.service';
 
         <div class="card border-0 shadow-sm">
           <div class="card-body">
-            <h6 class="mb-3">Change password</h6>
+            <h6 class="mb-3 fw-bold">{{ 'profile.changePassword' | t }}</h6>
             <form [formGroup]="pwForm" (ngSubmit)="changePassword()">
               <div class="row g-2">
                 <div class="col-md-6">
-                  <input class="form-control" type="password" formControlName="currentPassword" placeholder="Current password">
+                  <input class="form-control" type="password" formControlName="currentPassword" [placeholder]="'profile.currentPassword' | t">
                 </div>
                 <div class="col-md-6">
-                  <input class="form-control" type="password" formControlName="newPassword" placeholder="New password (min 8)">
+                  <input class="form-control" type="password" formControlName="newPassword" [placeholder]="'profile.newPassword' | t">
                 </div>
               </div>
               <button class="btn btn-outline-primary mt-3" [disabled]="pwForm.invalid || pwSaving()">
-                @if (pwSaving()) { <span class="spinner-border spinner-border-sm me-2"></span> } Update password
+                @if (pwSaving()) { <span class="spinner-border spinner-border-sm me-2"></span> } {{ 'profile.updatePassword' | t }}
               </button>
               @if (pwMsg()) { <span class="ms-2 small" [class.text-success]="pwOk()" [class.text-danger]="!pwOk()">{{ pwMsg() }}</span> }
             </form>
@@ -77,6 +78,7 @@ import { AuthService } from '../core/auth.service';
 export class ProfileComponent {
   private fb = inject(FormBuilder);
   private api = inject(ApiService);
+  private i18n = inject(I18nService);
   auth = inject(AuthService);
 
   saving = signal(false);
@@ -99,8 +101,8 @@ export class ProfileComponent {
   save() {
     this.saving.set(true); this.saveMsg.set(null);
     this.api.updateProfile(this.form.getRawValue()).subscribe({
-      next: u => { this.auth.updateLocalUser(u); this.saveMsg.set('Saved'); this.saving.set(false); },
-      error: () => { this.saveMsg.set('Failed'); this.saving.set(false); }
+      next: u => { this.auth.updateLocalUser(u); this.saveMsg.set(this.i18n.t('common.saved')); this.saving.set(false); },
+      error: () => { this.saveMsg.set(this.i18n.t('common.failed')); this.saving.set(false); }
     });
   }
 
@@ -108,8 +110,8 @@ export class ProfileComponent {
     const f = (ev.target as HTMLInputElement).files?.[0]; if (!f) return;
     this.avatarMsg.set(null);
     this.api.uploadAvatar(f).subscribe({
-      next: u => { this.auth.updateLocalUser(u); this.avatarMsg.set('Avatar updated'); },
-      error: () => this.avatarMsg.set('Upload failed')
+      next: u => { this.auth.updateLocalUser(u); this.avatarMsg.set(this.i18n.t('profile.avatarUpdated')); },
+      error: () => this.avatarMsg.set(this.i18n.t('profile.uploadFailed'))
     });
   }
 
@@ -117,8 +119,8 @@ export class ProfileComponent {
     if (this.pwForm.invalid) return;
     this.pwSaving.set(true); this.pwMsg.set(null);
     this.api.changePassword(this.pwForm.getRawValue()).subscribe({
-      next: () => { this.pwOk.set(true); this.pwMsg.set('Password changed.'); this.pwForm.reset({ currentPassword: '', newPassword: '' }); this.pwSaving.set(false); },
-      error: e => { this.pwOk.set(false); this.pwMsg.set((e?.error?.errors || ['Failed'])[0]); this.pwSaving.set(false); }
+      next: () => { this.pwOk.set(true); this.pwMsg.set(this.i18n.t('profile.passwordChanged')); this.pwForm.reset({ currentPassword: '', newPassword: '' }); this.pwSaving.set(false); },
+      error: e => { this.pwOk.set(false); this.pwMsg.set((e?.error?.errors || [e?.error?.detail || 'Failed'])[0]); this.pwSaving.set(false); }
     });
   }
 }

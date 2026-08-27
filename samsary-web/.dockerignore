@@ -1,0 +1,8 @@
+# Build happens inside the image via "npm ci" + "npm run build".
+node_modules/
+dist/
+.angular/
+.vscode/
+.git/
+**/*.spec.ts
+.env

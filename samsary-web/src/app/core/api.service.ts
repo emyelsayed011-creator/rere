@@ -1,9 +1,9 @@
-import { Injectable, inject } from '@angular/core';
+﻿import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import {
-  AuthUser, Category, ChatMessage, Conversation, Listing, ListingType,
-  NotificationItem, PagedListings
+  Advertisement, AuthUser, BanRecord, Category, ChatMessage, Conversation, Listing, ListingType,
+  Moderator, ModeratorPermission, NotificationItem, PagedListings, PagedReviews, Review, ReviewSummary
 } from './models';
 
 @Injectable({ providedIn: 'root' })
@@ -62,6 +62,35 @@ export class ApiService {
   }
   markNotification(id: number) { return this.http.post<void>(`${this.base}/notifications/${id}/read`, {}); }
   markAllRead() { return this.http.post<void>(`${this.base}/notifications/read-all`, {}); }
+  getNotificationPrefs() { return this.http.get<any>(`${this.base}/notifications/preferences`); }
+  updateNotificationPrefs(body: any) { return this.http.put<any>(`${this.base}/notifications/preferences`, body); }
+
+  // reviews
+  listingReviews(listingId: number, page = 1, pageSize = 10) {
+    return this.http.get<PagedReviews>(`${this.base}/listings/${listingId}/reviews`,
+      { params: new HttpParams().set('page', page).set('pageSize', pageSize) });
+  }
+  reviewSummary(listingId: number) {
+    return this.http.get<ReviewSummary>(`${this.base}/listings/${listingId}/reviews/summary`);
+  }
+  createReview(listingId: number, body: { rating: number; content: string }) {
+    return this.http.post<Review>(`${this.base}/listings/${listingId}/reviews`, body);
+  }
+  adminReviews(page = 1, includeDeleted = false) {
+    return this.http.get<PagedReviews>(`${this.base}/admin/reviews`,
+      { params: new HttpParams().set('page', page).set('includeDeleted', includeDeleted) });
+  }
+  adminDeleteReview(id: number, reason: string) {
+    return this.http.delete<void>(`${this.base}/admin/reviews/${id}`, { body: { reason } });
+  }
+
+  // ban
+  adminBanUser(id: string, reason: string, durationHours: number | null) {
+    return this.http.post<void>(`${this.base}/admin/users/${id}/ban`, { reason, durationHours });
+  }
+  adminUnbanUser(id: string) {
+    return this.http.post<void>(`${this.base}/admin/users/${id}/unban`, {});
+  }
 
   // admin
   adminDashboard() { return this.http.get<any>(`${this.base}/admin/dashboard`); }
@@ -81,5 +110,44 @@ export class ApiService {
     let p = new HttpParams().set('page', page);
     if (level) p = p.set('level', level);
     return this.http.get<any>(`${this.base}/admin/logs`, { params: p });
+  }
+
+  // advertisements
+  activeAds(placement: string) {
+    return this.http.get<Advertisement[]>(`${this.base}/advertisements/${placement}`);
+  }
+  trackAdClick(id: number) {
+    return this.http.post<void>(`${this.base}/advertisements/${id}/click`, {});
+  }
+  adminAds() { return this.http.get<Advertisement[]>(`${this.base}/advertisements`); }
+  adminCreateAd(body: Partial<Advertisement>) {
+    return this.http.post<Advertisement>(`${this.base}/advertisements`, body);
+  }
+  adminUpdateAd(id: number, body: Partial<Advertisement> & { isActive: boolean }) {
+    return this.http.put<Advertisement>(`${this.base}/advertisements/${id}`, body);
+  }
+  adminDeleteAd(id: number) {
+    return this.http.delete<void>(`${this.base}/advertisements/${id}`);
+  }
+
+  // consent
+  saveConsent(body: object) {
+    return this.http.post<void>(`${this.base}/consent`, body);
+  }
+  getConsent(sessionId?: string) {
+    const p = sessionId ? new HttpParams().set('sessionId', sessionId) : undefined;
+    return this.http.get<any>(`${this.base}/consent`, { params: p });
+  }
+
+  // moderators (admin only)
+  getModerators() { return this.http.get<Moderator[]>(`${this.base}/admin/moderators`); }
+  createModerator(userId: string, permissions: ModeratorPermission) {
+    return this.http.post<Moderator>(`${this.base}/admin/moderators`, { userId, permissions });
+  }
+  updateModeratorPermissions(userId: string, permissions: ModeratorPermission) {
+    return this.http.put<Moderator>(`${this.base}/admin/moderators/${userId}`, { permissions });
+  }
+  removeModerator(userId: string) {
+    return this.http.delete<void>(`${this.base}/admin/moderators/${userId}`);
   }
 }

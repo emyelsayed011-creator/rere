@@ -2,13 +2,14 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/api.service';
+import { TranslatePipe } from '../../core/i18n.service';
 
 @Component({
   selector: 'app-admin-moderate',
   standalone: true,
-  imports: [DatePipe, FormsModule],
+  imports: [DatePipe, FormsModule, TranslatePipe],
   template: `
-    <h4 class="mb-3">Pending listings</h4>
+    <h4 class="mb-3 fw-bold">{{ 'admin.pendingListings' | t }}</h4>
     <div class="row g-3">
       @for (l of items(); track l.id) {
         <div class="col-md-6">
@@ -19,35 +20,35 @@ import { ApiService } from '../../core/api.service';
             <div class="card-body">
               <div class="d-flex justify-content-between">
                 <h6 class="mb-1">{{ l.title }}</h6>
-                <span class="badge" [class.bg-success]="l.type===1" [class.bg-info]="l.type===2">
-                  {{ l.type === 1 ? 'Sell' : 'Rent' }}
+                <span class="badge text-white" [class.bg-success]="l.type===1" [class.bg-info]="l.type===2">
+                  {{ (l.type === 1 ? 'common.sell' : 'common.rentShort') | t }}
                 </span>
               </div>
               <div class="text-muted small mb-2">
-                {{ l.category?.name }} · by {{ l.owner?.displayName }} ({{ l.owner?.email }})
+                {{ l.category?.name }} · {{ l.owner?.displayName }} ({{ l.owner?.email }})
                 · {{ l.createdAt | date:'short' }}
               </div>
-              <p class="small text-truncate-3 mb-3" style="display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
+              <p class="small mb-3" style="display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
                 {{ l.description }}
               </p>
               <div class="d-flex gap-2">
                 <button class="btn btn-success btn-sm" (click)="approve(l.id)">
-                  <i class="bi bi-check2"></i> Approve
+                  <i class="bi bi-check2"></i> {{ 'admin.approve' | t }}
                 </button>
                 <button class="btn btn-outline-danger btn-sm" (click)="openReject(l)">
-                  <i class="bi bi-x"></i> Reject
+                  <i class="bi bi-x"></i> {{ 'admin.reject' | t }}
                 </button>
               </div>
               @if (rejectingId() === l.id) {
                 <div class="mt-2">
-                  <textarea class="form-control mb-2" rows="2" [(ngModel)]="reason" placeholder="Reason"></textarea>
-                  <button class="btn btn-danger btn-sm" (click)="reject(l.id)" [disabled]="!reason.trim()">Confirm reject</button>
+                  <textarea class="form-control mb-2" rows="2" [(ngModel)]="reason" [placeholder]="'admin.reason' | t"></textarea>
+                  <button class="btn btn-danger btn-sm" (click)="reject(l.id)" [disabled]="!reason.trim()">{{ 'admin.confirmReject' | t }}</button>
                 </div>
               }
             </div>
           </div>
         </div>
-      } @empty { <div class="col-12 text-center text-muted py-5">Nothing pending. </div> }
+      } @empty { <div class="col-12 text-center text-muted py-5">{{ 'admin.nothingPending' | t }}</div> }
     </div>
   `
 })

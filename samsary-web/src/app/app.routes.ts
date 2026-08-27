@@ -1,5 +1,8 @@
+import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
-import { authGuard, adminGuard, guestGuard } from './core/auth.guard';
+import { authGuard, adminGuard, staffGuard, guestGuard, permissionGuard, firstPermittedRoute } from './core/auth.guard';
+import { AuthService } from './core/auth.service';
+import { ModeratorPermission } from './core/models';
 
 export const routes: Routes = [
   { path: '', loadComponent: () => import('./features/home').then(m => m.HomeComponent) },
@@ -18,16 +21,27 @@ export const routes: Routes = [
   { path: 'chat/:userId', canActivate: [authGuard], loadComponent: () => import('./features/chat').then(m => m.ChatComponent) },
 
   {
-    path: 'admin', canActivate: [adminGuard],
+    path: 'admin', canActivate: [staffGuard],
     loadComponent: () => import('./features/admin/admin-shell').then(m => m.AdminShellComponent),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
-      { path: 'dashboard', loadComponent: () => import('./features/admin/dashboard').then(m => m.AdminDashboardComponent) },
-      { path: 'moderate', loadComponent: () => import('./features/admin/moderate').then(m => m.AdminModerateComponent) },
-      { path: 'users', loadComponent: () => import('./features/admin/users').then(m => m.AdminUsersComponent) },
-      { path: 'logs', loadComponent: () => import('./features/admin/logs').then(m => m.AdminLogsComponent) }
+      {
+        // Smart landing: Admin → dashboard, Moderator → first permitted section.
+        path: '', pathMatch: 'full',
+        redirectTo: () => firstPermittedRoute(inject(AuthService)).join('/').replace(/^\//, '')
+      },
+      { path: 'dashboard',  canActivate: [adminGuard],                                          loadComponent: () => import('./features/admin/dashboard').then(m => m.AdminDashboardComponent) },
+      { path: 'moderate',   canActivate: [permissionGuard(ModeratorPermission.ManageListings)], loadComponent: () => import('./features/admin/moderate').then(m => m.AdminModerateComponent) },
+      { path: 'users',      canActivate: [permissionGuard(ModeratorPermission.ManageUsers)],    loadComponent: () => import('./features/admin/users').then(m => m.AdminUsersComponent) },
+      { path: 'ads',        canActivate: [permissionGuard(ModeratorPermission.ManageAds)],      loadComponent: () => import('./features/admin/advertisements').then(m => m.AdminAdsComponent) },
+      { path: 'reviews',    canActivate: [permissionGuard(ModeratorPermission.ManageReviews)],  loadComponent: () => import('./features/admin/reviews').then(m => m.AdminReviewsComponent) },
+      { path: 'logs',       canActivate: [permissionGuard(ModeratorPermission.ViewLogs)],       loadComponent: () => import('./features/admin/logs').then(m => m.AdminLogsComponent) },
+      { path: 'moderators', canActivate: [adminGuard],                                          loadComponent: () => import('./features/admin/moderators').then(m => m.AdminModeratorsComponent) }
     ]
   },
+
+  { path: 'terms', loadComponent: () => import('./features/legal').then(m => m.LegalComponent), data: { page: 'terms' } },
+  { path: 'privacy', loadComponent: () => import('./features/legal').then(m => m.LegalComponent), data: { page: 'privacy' } },
+  { path: 'cookies', loadComponent: () => import('./features/legal').then(m => m.LegalComponent), data: { page: 'cookies' } },
 
   { path: '**', redirectTo: '' }
 ];

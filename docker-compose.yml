@@ -1,0 +1,121 @@
+# =============================================================================
+# Samsary — full stack for deployment / local "production-like" run.
+#
+# Services:
+#   db   : PostgreSQL (the app auto-migrates + seeds on startup).
+#   seq  : Structured log viewer (Serilog already ships logs to it).
+#   api  : The .NET 9 backend (Samsary.Api).
+#   web  : Angular SPA served by nginx, proxying /api and /hubs to "api".
+#
+# Secrets/config are passed as ENVIRONMENT VARIABLES. ASP.NET overlays these on
+# top of appsettings.json (double-underscore "__" = nested key), so your
+# appsettings.json stays untouched and the empty secret slots get filled here.
+#
+# Usage:
+#   1) copy .env.example -> .env  and fill in the values
+#   2) docker compose up -d --build
+#   3) open http://localhost:8080   (SPA)   |  http://localhost:5341 (Seq logs)
+# =============================================================================
+
+name: samsary
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: samsary-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-samsary}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"            # remove this line if you don't need DB access from the host
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-samsary}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  seq:
+    image: datalust/seq:latest
+    container_name: samsary-seq
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+    ports:
+      - "5341:80"              # Seq UI + ingestion (open http://localhost:5341)
+    volumes:
+      - seq-data:/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: samsary-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .                          # repo root, so all projects are visible
+      dockerfile: src/Samsary.Api/Dockerfile
+    image: ${REGISTRY:-samsary}/samsary-api:${TAG:-latest}
+    container_name: samsary-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      # --- DB: point the app at the "db" service instead of localhost ---
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB:-samsary};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
+      # --- Structured logging -> Seq container ---
+      Seq__ServerUrl: "http://seq:80"
+      # --- Secrets (filled from your .env file) ---
+      Jwt__SigningKey: "${JWT_SIGNING_KEY}"
+      Seed__AdminEmail: "${SEED_ADMIN_EMAIL:-admin@samsary.local}"
+      Seed__AdminPassword: "${SEED_ADMIN_PASSWORD}"
+      Cloudinary__CloudName: "${CLOUDINARY_CLOUD_NAME}"
+      Cloudinary__ApiKey: "${CLOUDINARY_API_KEY}"
+      Cloudinary__ApiSecret: "${CLOUDINARY_API_SECRET}"
+      Email__SmtpHost: "${EMAIL_SMTP_HOST}"
+      Email__User: "${EMAIL_USER}"
+      Email__Password: "${EMAIL_PASSWORD}"
+      Redis__ConnectionString: "redis:6379"
+      Sms__AccountSid: "${SMS_ACCOUNT_SID}"
+      Sms__AuthToken: "${SMS_AUTH_TOKEN}"
+      Sms__FromNumber: "${SMS_FROM_NUMBER}"
+    ports:
+      - "5013:8080"            # call the API directly at http://localhost:5013 (optional)
+    volumes:
+      - api-logs:/app/Logs     # persist Serilog file logs
+
+  web:
+    build:
+      context: ./samsary-web
+      dockerfile: Dockerfile
+    image: ${REGISTRY:-samsary}/samsary-web:${TAG:-latest}
+    container_name: samsary-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "8080:80"              # the app users open: http://localhost:8080
+
+volumes:
+  db-data:
+  seq-data:
+  api-logs:
+  redis-data:
