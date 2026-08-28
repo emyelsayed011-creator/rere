@@ -18,7 +18,29 @@ public static class SeedData
         var roleMgr = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
         var userMgr = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-        await ctx.Database.MigrateAsync();
+        var hasAnyTable = await ctx.Database.SqlQueryRaw<string>(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+            .AnyAsync();
+
+        if (!hasAnyTable)
+        {
+            await ctx.Database.EnsureCreatedAsync();
+        }
+        else
+        {
+            try
+            {
+                await ctx.Database.MigrateAsync();
+            }
+            catch (Exception ex) when (
+                ex.Message.Contains("PendingModelChangesWarning", StringComparison.OrdinalIgnoreCase) ||
+                ex.Message.Contains("pending changes", StringComparison.OrdinalIgnoreCase) ||
+                ex.Message.Contains("does not exist", StringComparison.OrdinalIgnoreCase))
+            {
+                // Fresh DB / partially initialized schema: create the model-defined schema.
+                await ctx.Database.EnsureCreatedAsync();
+            }
+        }
 
         foreach (var role in new[] { AdminRole, UserRole })
         {
