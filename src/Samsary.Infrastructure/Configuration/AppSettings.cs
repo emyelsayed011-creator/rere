@@ -6,6 +6,7 @@ public class JwtSettings
     public string Audience { get; set; } = "SamsaryClient";
     public string SigningKey { get; set; } = string.Empty;
     public int AccessTokenMinutes { get; set; } = 120;
+    public int RefreshTokenDays { get; set; } = 30;
 }
 
 public class CloudinarySettings
@@ -32,4 +33,9 @@ public class SmsSettings
     public string AccountSid { get; set; } = string.Empty;
     public string AuthToken { get; set; } = string.Empty;
     public string FromNumber { get; set; } = string.Empty;
+}
+
+public class RedisSettings
+{
+    public string ConnectionString { get; set; } = "localhost:6379";
 }

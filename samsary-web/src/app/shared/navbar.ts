@@ -13,7 +13,7 @@ import { I18nService, TranslatePipe } from '../core/i18n.service';
     <nav class="navbar navbar-expand-lg sticky-top shadow-sm">
       <div class="container">
         <a class="navbar-brand navbar-brand-samsary" routerLink="/">
-          <i class="bi bi-bag-heart-fill me-1"></i>Samsary
+          <i class="bi bi-buildings-fill me-1"></i>سمسارة
         </a>
         <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
           <span class="navbar-toggler-icon"></span>

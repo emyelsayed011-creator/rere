@@ -18,7 +18,7 @@ public sealed class GetCategoriesQueryHandler : IQueryHandler<GetCategoriesQuery
     {
         var categories = await _categories.ListAsync(new AllCategoriesSpecification(), cancellationToken);
         IReadOnlyList<CategoryDto> dtos = categories
-            .Select(c => new CategoryDto(c.Id, c.Name, c.Slug, c.IconClass))
+            .Select(c => new CategoryDto(c.Id, c.Name, c.NameAr, c.Slug, c.IconClass))
             .ToList();
         return Result.Success(dtos);
     }

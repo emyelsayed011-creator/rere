@@ -10,7 +10,7 @@ namespace Samsary.Application.Features.Categories.Commands;
 
 // ── Create ────────────────────────────────────────────────────────────────────
 
-public sealed record CreateCategoryCommand(string Name, string Slug, string? IconClass)
+public sealed record CreateCategoryCommand(string Name, string? NameAr, string Slug, string? IconClass)
     : ICommand<Result<CategoryDto>>;
 
 public sealed class CreateCategoryCommandValidator : AbstractValidator<CreateCategoryCommand>
@@ -42,6 +42,7 @@ public sealed class CreateCategoryCommandHandler : ICommandHandler<CreateCategor
         var category = new Category
         {
             Name = request.Name.Trim(),
+            NameAr = request.NameAr?.Trim(),
             Slug = request.Slug.Trim().ToLowerInvariant(),
             IconClass = request.IconClass?.Trim()
         };
@@ -49,13 +50,13 @@ public sealed class CreateCategoryCommandHandler : ICommandHandler<CreateCategor
         _categories.Add(category);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new CategoryDto(category.Id, category.Name, category.Slug, category.IconClass);
+        return new CategoryDto(category.Id, category.Name, category.NameAr, category.Slug, category.IconClass);
     }
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
 
-public sealed record UpdateCategoryCommand(int Id, string Name, string Slug, string? IconClass)
+public sealed record UpdateCategoryCommand(int Id, string Name, string? NameAr, string Slug, string? IconClass)
     : ICommand<Result<CategoryDto>>;
 
 public sealed class UpdateCategoryCommandValidator : AbstractValidator<UpdateCategoryCommand>
@@ -92,13 +93,14 @@ public sealed class UpdateCategoryCommandHandler : ICommandHandler<UpdateCategor
             return Error.Conflict("Category.SlugExists", $"Slug '{request.Slug}' is already in use.");
 
         category.Name = request.Name.Trim();
+        category.NameAr = request.NameAr?.Trim();
         category.Slug = request.Slug.Trim().ToLowerInvariant();
         category.IconClass = request.IconClass?.Trim();
 
         _categories.Update(category);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new CategoryDto(category.Id, category.Name, category.Slug, category.IconClass);
+        return new CategoryDto(category.Id, category.Name, category.NameAr, category.Slug, category.IconClass);
     }
 }
 

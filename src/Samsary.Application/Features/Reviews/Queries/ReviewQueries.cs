@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Samsary.Application.Common.Interfaces;
 using Samsary.Application.Common.Messaging;
+using Samsary.Application.Common.Models;
 using Samsary.Application.Common.Results;
 using Samsary.Application.DTOs;
 using Samsary.Application.Features.Reviews.Commands;
@@ -89,9 +90,4 @@ public sealed class GetAllReviewsQueryHandler : IQueryHandler<GetAllReviewsQuery
     }
 }
 
-// ── Shared paged-result wrapper ───────────────────────────────────────────────
 
-public record PagedResult<T>(IReadOnlyList<T> Items, int Total, int Page, int PageSize)
-{
-    public int TotalPages => (int)Math.Ceiling((double)Total / PageSize);
-}

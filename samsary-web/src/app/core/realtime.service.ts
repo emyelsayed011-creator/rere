@@ -13,6 +13,7 @@ export class RealtimeService {
   readonly latestMessage = signal<ChatMessage | null>(null);
   readonly latestNotification = signal<NotificationItem | null>(null);
   readonly unreadDelta = signal(0);
+  readonly newListing = signal<{ id: number; title: string; category?: string; price: number; currency: string; type: number; location?: string } | null>(null);
 
   async connect() {
     const token = this.auth.token();
@@ -38,6 +39,7 @@ export class RealtimeService {
         this.latestNotification.set(n);
         this.unreadDelta.update(v => v + 1);
       });
+      this.notif.on('newListing', (l: any) => this.newListing.set(l));
       await this.notif.start();
     }
   }

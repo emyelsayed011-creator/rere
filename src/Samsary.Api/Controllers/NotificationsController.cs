@@ -1,35 +1,29 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Samsary.Application.DTOs;
-using Samsary.Application.Services.Notifications;
+using Samsary.Application.Features.Notifications.Commands;
+using Samsary.Application.Features.Notifications.Queries;
 
 namespace Samsary.Api.Controllers;
 
-[ApiController]
 [Authorize]
 [Route("api/notifications")]
-public class NotificationsController : ControllerBase
+public class NotificationsController : ApiControllerBase
 {
-    private readonly INotificationQueryService _notifications;
+    private readonly ISender _sender;
 
-    public NotificationsController(INotificationQueryService notifications) => _notifications = notifications;
+    public NotificationsController(ISender sender) => _sender = sender;
 
     [HttpGet]
-    public async Task<ActionResult<NotificationListDto>> Get(
+    public async Task<IActionResult> Get(
         [FromQuery] bool unreadOnly = false, [FromQuery] int take = 50, CancellationToken ct = default)
-        => Ok(await _notifications.GetAsync(unreadOnly, take, ct));
+        => HandleResult(await _sender.Send(new GetNotificationsQuery(unreadOnly, take), ct));
 
     [HttpPost("{id:long}/read")]
     public async Task<IActionResult> Read(long id, CancellationToken ct)
-    {
-        await _notifications.MarkReadAsync(id, ct);
-        return NoContent();
-    }
+        => HandleResult(await _sender.Send(new MarkNotificationReadCommand(id), ct));
 
     [HttpPost("read-all")]
     public async Task<IActionResult> ReadAll(CancellationToken ct)
-    {
-        await _notifications.MarkAllReadAsync(ct);
-        return NoContent();
-    }
+        => HandleResult(await _sender.Send(new MarkAllNotificationsReadCommand(), ct));
 }

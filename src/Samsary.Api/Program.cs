@@ -57,7 +57,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // when a Redis connection string is configured and multi-instance deployment is needed.
 builder.Services.AddOutputCache();
 
-// ── Wolverine (durable messaging + transactional outbox on PostgreSQL) ─────────
+// Wolverine: transactional outbox + durable messaging on PostgreSQL
 var wolverineConn = builder.Configuration.GetConnectionString("Default")!;
 builder.Host.UseWolverine(opts =>
 {

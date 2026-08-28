@@ -1,29 +1,30 @@
 /* ============================================================
    Samsary — global styles
-   Pink theme · glassmorphism · animations · responsive · RTL
+   Real-estate theme · navy + gold · glassmorphism · RTL
    ============================================================ */
 
 :root {
-  /* Brand palette */
-  --samsary-primary: #ec4899;     /* pink-500 */
-  --samsary-primary-rgb: 236, 72, 153;
-  --samsary-primary-dark: #db2777; /* pink-600 */
-  --samsary-accent: #a855f7;      /* purple-500 */
-  --samsary-accent-2: #f472b6;    /* pink-400 */
-  --samsary-soft: #fff1f7;        /* very light pink */
-  --samsary-ink: #2b2138;
+  /* Brand palette — deep navy + warm gold */
+  --samsary-primary: #1a4f7a;          /* deep navy */
+  --samsary-primary-rgb: 26, 79, 122;
+  --samsary-primary-dark: #113352;
+  --samsary-accent: #c9991f;           /* warm gold */
+  --samsary-accent-2: #2e86c1;         /* sky blue */
+  --samsary-soft: #eaf3fb;             /* very light blue */
+  --samsary-ink: #0d1f2d;
 
-  --samsary-gradient: linear-gradient(135deg, #ec4899 0%, #a855f7 100%);
-  --samsary-gradient-soft: linear-gradient(135deg, #fff1f7 0%, #f5f0ff 100%);
+  --samsary-gradient: linear-gradient(135deg, #1a4f7a 0%, #2e86c1 100%);
+  --samsary-gradient-gold: linear-gradient(135deg, #c9991f 0%, #e8c060 100%);
+  --samsary-gradient-soft: linear-gradient(135deg, #eaf3fb 0%, #d4e9f7 100%);
   --samsary-shadow: 0 10px 30px rgba(var(--samsary-primary-rgb), 0.18);
   --samsary-shadow-lg: 0 18px 45px rgba(var(--samsary-primary-rgb), 0.25);
 
   /* Bootstrap overrides */
-  --bs-primary: #ec4899;
-  --bs-primary-rgb: 236, 72, 153;
-  --bs-link-color: #db2777;
-  --bs-link-hover-color: #be185d;
-  --bs-body-color: #3b3147;
+  --bs-primary: #1a4f7a;
+  --bs-primary-rgb: 26, 79, 122;
+  --bs-link-color: #1a4f7a;
+  --bs-link-hover-color: #113352;
+  --bs-body-color: #1a2b3c;
   --bs-border-radius: 0.85rem;
   --bs-border-radius-lg: 1.15rem;
 }
@@ -34,9 +35,9 @@ html { scroll-behavior: smooth; }
 body {
   font-family: 'Poppins', 'Cairo', system-ui, -apple-system, 'Segoe UI', sans-serif;
   background:
-    radial-gradient(1200px 600px at 100% -10%, rgba(168, 85, 247, 0.10), transparent 60%),
-    radial-gradient(1000px 500px at -10% 0%, rgba(236, 72, 153, 0.10), transparent 55%),
-    #fbf7fb;
+    radial-gradient(1200px 600px at 100% -10%, rgba(46, 134, 193, 0.07), transparent 60%),
+    radial-gradient(1000px 500px at -10% 0%, rgba(26, 79, 122, 0.07), transparent 55%),
+    #f4f8fc;
   min-height: 100vh;
 }
 

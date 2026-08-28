@@ -29,6 +29,6 @@ public sealed class GetAdminUsersQueryHandler : IQueryHandler<GetAdminUsersQuery
             .Select(u => new AdminUserDto(u.Id, u.Email, u.DisplayName, u.IsBlocked, u.CreatedAt))
             .ToList();
 
-        return new PagedResult<AdminUserDto>(total, page, pageSize, dtos);
+        return new PagedResult<AdminUserDto>(dtos, total, page, pageSize);
     }
 }

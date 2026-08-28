@@ -1,18 +1,36 @@
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Samsary.Application.DTOs;
-using Samsary.Application.Services.Categories;
+using Samsary.Application.Features.Categories.Commands;
+using Samsary.Application.Features.Categories.Queries;
+using Samsary.Infrastructure.Persistence;
 
 namespace Samsary.Api.Controllers;
 
-[ApiController]
 [Route("api/categories")]
-public class CategoriesController : ControllerBase
+public class CategoriesController : ApiControllerBase
 {
-    private readonly ICategoryService _categories;
+    private readonly ISender _sender;
 
-    public CategoriesController(ICategoryService categories) => _categories = categories;
+    public CategoriesController(ISender sender) => _sender = sender;
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<CategoryDto>>> Get(CancellationToken ct)
-        => Ok(await _categories.GetAllAsync(ct));
+    public async Task<IActionResult> Get(CancellationToken ct)
+        => HandleResult(await _sender.Send(new GetCategoriesQuery(), ct));
+
+    [Authorize(Roles = SeedData.AdminRole)]
+    [HttpPost]
+    public async Task<IActionResult> Create(CreateCategoryDto dto, CancellationToken ct)
+        => HandleResult(await _sender.Send(new CreateCategoryCommand(dto.Name, dto.NameAr, dto.Slug, dto.IconClass), ct));
+
+    [Authorize(Roles = SeedData.AdminRole)]
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(int id, UpdateCategoryDto dto, CancellationToken ct)
+        => HandleResult(await _sender.Send(new UpdateCategoryCommand(id, dto.Name, dto.NameAr, dto.Slug, dto.IconClass), ct));
+
+    [Authorize(Roles = SeedData.AdminRole)]
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+        => HandleResult(await _sender.Send(new DeleteCategoryCommand(id), ct));
 }

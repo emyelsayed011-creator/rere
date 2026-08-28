@@ -28,6 +28,6 @@ public sealed class GetSystemLogsQueryHandler : IQueryHandler<GetSystemLogsQuery
                 l.Path, l.Method, l.StatusCode, l.Exception, l.CreatedAt))
             .ToList();
 
-        return new PagedResult<SystemLogDto>(total, page, pageSize, dtos);
+        return new PagedResult<SystemLogDto>(dtos, total, page, pageSize);
     }
 }

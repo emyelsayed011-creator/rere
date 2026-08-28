@@ -9,7 +9,15 @@ public class ApplicationUser : IdentityUser
     public string? Bio { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public bool IsBlocked { get; set; }
+    public string? Country { get; set; }
+    public string? Gender { get; set; }
+    public DateTime? DateOfBirth { get; set; }
+    public DateTime? BannedUntil { get; set; }
 
     public ICollection<Listing> Listings { get; set; } = new List<Listing>();
     public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+    public ICollection<UserFavorite> Favorites { get; set; } = new List<UserFavorite>();
+    public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+    public ICollection<ListingAlert> ListingAlerts { get; set; } = new List<ListingAlert>();
+    public UserNotificationPreferences? NotificationPreferences { get; set; }
 }

@@ -45,3 +45,11 @@ public record SystemLogDto(
     int? StatusCode,
     string? Exception,
     DateTime CreatedAt);
+
+public record BanUserRequestDto(string Reason, int? DurationHours);
+
+public record AdminMessageBodyDto(string Body);
+
+public record CreateModeratorRequestDto(string UserId, int Permissions);
+
+public record UpdateModeratorRequestDto(int Permissions);

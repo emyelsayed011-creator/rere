@@ -1,22 +1,32 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Samsary.Application.DTOs;
-using Samsary.Application.Services.Auth;
+using Samsary.Application.Features.Auth.Commands;
 
 namespace Samsary.Api.Controllers;
 
-[ApiController]
 [Route("api/auth")]
-public class AuthController : ControllerBase
+public class AuthController : ApiControllerBase
 {
-    private readonly IAuthService _auth;
+    private readonly ISender _sender;
 
-    public AuthController(IAuthService auth) => _auth = auth;
+    public AuthController(ISender sender) => _sender = sender;
 
     [HttpPost("register")]
-    public async Task<ActionResult<AuthResponseDto>> Register(RegisterDto dto, CancellationToken ct)
-        => Ok(await _auth.RegisterAsync(dto, ct));
+    public async Task<IActionResult> Register(RegisterDto dto, CancellationToken ct)
+        => HandleResult(
+            await _sender.Send(new RegisterCommand(dto.Email, dto.Password, dto.DisplayName), ct),
+            created => CreatedAtAction(nameof(Register), created));
 
     [HttpPost("login")]
-    public async Task<ActionResult<AuthResponseDto>> Login(LoginDto dto, CancellationToken ct)
-        => Ok(await _auth.LoginAsync(dto, ct));
+    public async Task<IActionResult> Login(LoginDto dto, CancellationToken ct)
+        => HandleResult(await _sender.Send(new LoginCommand(dto.Email, dto.Password), ct));
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh([FromBody] string refreshToken, CancellationToken ct)
+        => HandleResult(await _sender.Send(new RefreshTokenCommand(refreshToken), ct));
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout([FromBody] string refreshToken, CancellationToken ct)
+        => HandleResult(await _sender.Send(new LogoutCommand(refreshToken), ct));
 }

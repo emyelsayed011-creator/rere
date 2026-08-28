@@ -3,6 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { NavbarComponent } from './shared/navbar';
 import { AuthService } from './core/auth.service';
 import { I18nService, TranslatePipe } from './core/i18n.service';
+import { ThemeService } from './core/theme.service';
 
 @Component({
   selector: 'app-root',
@@ -14,7 +15,7 @@ import { I18nService, TranslatePipe } from './core/i18n.service';
       <router-outlet />
     </main>
     <footer class="app-footer text-center py-4 mt-5">
-      <div class="navbar-brand-samsary mb-1">Samsary</div>
+      <div class="navbar-brand-samsary mb-1">{{ theme.adminTheme()?.siteName || 'Samsary' }}</div>
       <div class="text-muted small">© {{ year }} Samsary · {{ 'app.tagline' | t }}</div>
     </footer>
   `
@@ -22,6 +23,15 @@ import { I18nService, TranslatePipe } from './core/i18n.service';
 export class App implements OnInit {
   private auth = inject(AuthService);
   private i18n = inject(I18nService);
+  readonly theme = inject(ThemeService);
   year = new Date().getFullYear();
-  ngOnInit() { this.auth.bootstrap(); }
+  ngOnInit() {
+    this.auth.bootstrap();
+    this.theme.loadAdminTheme();
+    // Reset any stored dark mode — site defaults to light
+    if (localStorage.getItem('samsary.theme') === 'dark') {
+      localStorage.removeItem('samsary.theme');
+      this.theme.setTheme('light');
+    }
+  }
 }

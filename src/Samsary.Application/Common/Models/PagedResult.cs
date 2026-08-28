@@ -1,3 +1,6 @@
 namespace Samsary.Application.Common.Models;
 
-public record PagedResult<T>(int Total, int Page, int PageSize, IReadOnlyList<T> Items);
+public record PagedResult<T>(IReadOnlyList<T> Items, int Total, int Page, int PageSize, int? NextCursor = null)
+{
+    public int TotalPages => PageSize > 0 ? (int)Math.Ceiling((double)Total / PageSize) : 0;
+}

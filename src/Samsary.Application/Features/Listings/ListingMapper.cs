@@ -8,7 +8,7 @@ internal static class ListingMapper
 {
     public static ListingDto ToDto(Listing l, bool isFavorited = false) => new(
         l.Id, l.Title, l.Description, l.Price, l.Currency, l.Type, l.Status, l.Location, l.RejectionReason,
-        new CategoryDto(l.Category!.Id, l.Category.Name, l.Category.Slug, l.Category.IconClass),
+        new CategoryDto(l.Category!.Id, l.Category.Name, l.Category.NameAr, l.Category.Slug, l.Category.IconClass),
         l.OwnerId, l.Owner?.DisplayName ?? "", l.Owner?.AvatarUrl,
         l.CreatedAt,
         l.Media.Select(ToMediaDto).ToList(),

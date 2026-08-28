@@ -1,37 +1,36 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Samsary.Api.Infrastructure;
 using Samsary.Application.DTOs;
-using Samsary.Application.Services.Users;
+using Samsary.Application.Features.Users.Commands;
+using Samsary.Application.Features.Users.Queries;
 
 namespace Samsary.Api.Controllers;
 
-[ApiController]
 [Authorize]
 [Route("api/users")]
-public class UsersController : ControllerBase
+public class UsersController : ApiControllerBase
 {
-    private readonly IUserProfileService _profiles;
+    private readonly ISender _sender;
 
-    public UsersController(IUserProfileService profiles) => _profiles = profiles;
+    public UsersController(ISender sender) => _sender = sender;
 
     [HttpGet("me")]
-    public async Task<ActionResult<UserDto>> Me(CancellationToken ct)
-        => Ok(await _profiles.GetCurrentAsync(ct));
+    public async Task<IActionResult> Me(CancellationToken ct)
+        => HandleResult(await _sender.Send(new GetCurrentUserQuery(), ct));
 
     [HttpPut("me")]
-    public async Task<ActionResult<UserDto>> Update(UpdateProfileDto dto, CancellationToken ct)
-        => Ok(await _profiles.UpdateAsync(dto, ct));
+    public async Task<IActionResult> Update(UpdateProfileDto dto, CancellationToken ct)
+        => HandleResult(await _sender.Send(
+            new UpdateProfileCommand(dto.DisplayName, dto.Bio, dto.AvatarUrl, dto.DateOfBirth, dto.Gender, dto.Country), ct));
 
     [HttpPost("me/avatar")]
     [RequestSizeLimit(10 * 1024 * 1024)]
-    public async Task<ActionResult<UserDto>> Avatar(IFormFile file, CancellationToken ct)
-        => Ok(await _profiles.UpdateAvatarAsync(new FormFileAdapter(file), ct));
+    public async Task<IActionResult> Avatar(IFormFile file, CancellationToken ct)
+        => HandleResult(await _sender.Send(new UpdateAvatarCommand(new FormFileAdapter(file)), ct));
 
     [HttpPost("me/change-password")]
     public async Task<IActionResult> ChangePassword(ChangePasswordDto dto, CancellationToken ct)
-    {
-        await _profiles.ChangePasswordAsync(dto, ct);
-        return NoContent();
-    }
+        => HandleResult(await _sender.Send(new ChangePasswordCommand(dto.CurrentPassword, dto.NewPassword), ct));
 }

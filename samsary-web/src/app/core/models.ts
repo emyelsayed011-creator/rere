@@ -46,7 +46,7 @@ export interface AuthUser {
 
 export interface AuthResponse { token: string; expiresAt: string; user: AuthUser; }
 
-export interface Category { id: number; name: string; slug: string; iconClass?: string; }
+export interface Category { id: number; name: string; nameAr?: string; slug: string; iconClass?: string; }
 
 export interface Media {
   id: number; url: string; publicId: string;

@@ -41,7 +41,7 @@ public sealed class SearchListingsQueryHandler : IQueryHandler<SearchListingsQue
         // Next cursor = smallest Id in the result set (we're ordering DESC by Id).
         int? nextCursor = items.Count == pageSize ? items[^1].Id : null;
 
-        return new PagedResult<ListingDto>(total, page, pageSize, items.Select(l => ListingMapper.ToDto(l)).ToList(), nextCursor);
+        return new PagedResult<ListingDto>(items.Select(l => ListingMapper.ToDto(l)).ToList(), total, page, pageSize, nextCursor);
     }
 }
 

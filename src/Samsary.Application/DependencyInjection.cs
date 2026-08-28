@@ -1,10 +1,7 @@
 using FluentValidation;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
-using Samsary.Application.Services.Admin;
-using Samsary.Application.Services.Categories;
-using Samsary.Application.Services.Chat;
-using Samsary.Application.Services.Listings;
-using Samsary.Application.Services.Notifications;
+using Samsary.Application.Common.Messaging;
 
 namespace Samsary.Application;
 
@@ -14,11 +11,10 @@ public static class DependencyInjection
     {
         services.AddValidatorsFromAssemblyContaining<DependencyInjectionMarker>();
 
-        services.AddScoped<ICategoryService, CategoryService>();
-        services.AddScoped<IListingService, ListingService>();
-        services.AddScoped<IChatService, ChatService>();
-        services.AddScoped<INotificationQueryService, NotificationQueryService>();
-        services.AddScoped<IAdminService, AdminService>();
+        services.AddMediatR(cfg =>
+            cfg.RegisterServicesFromAssembly(typeof(DependencyInjectionMarker).Assembly));
+
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
         return services;
     }

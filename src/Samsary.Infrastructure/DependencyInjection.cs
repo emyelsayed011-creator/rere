@@ -28,7 +28,7 @@ public static class DependencyInjection
         services.Configure<SmsSettings>(configuration.GetSection("Sms"));
         services.Configure<RedisSettings>(configuration.GetSection("Redis"));
 
-        // ── Database (with Wolverine outbox integration) ────────────────────────
+        // Database with Wolverine outbox integration
         services.AddDbContextWithWolverineIntegration<ApplicationDbContext>(opt =>
             opt.UseNpgsql(configuration.GetConnectionString("Default")));
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());

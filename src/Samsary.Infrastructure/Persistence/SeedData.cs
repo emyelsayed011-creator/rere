@@ -10,6 +10,7 @@ public static class SeedData
 {
     public const string AdminRole = "Admin";
     public const string UserRole = "User";
+    public const string ModeratorRole = "Moderator";
 
     public static async Task RunAsync(IServiceProvider services, IConfiguration config)
     {
@@ -67,12 +68,12 @@ public static class SeedData
         if (!await ctx.Categories.AnyAsync())
         {
             ctx.Categories.AddRange(
-                new Category { Name = "Apartments",  Slug = "apartments",  IconClass = "bi-building" },
-                new Category { Name = "Houses",      Slug = "houses",      IconClass = "bi-house-door" },
-                new Category { Name = "Vehicles",    Slug = "vehicles",    IconClass = "bi-car-front" },
-                new Category { Name = "Electronics", Slug = "electronics", IconClass = "bi-laptop" },
-                new Category { Name = "Furniture",   Slug = "furniture",   IconClass = "bi-lamp" },
-                new Category { Name = "Other",       Slug = "other",       IconClass = "bi-box" }
+                new Category { Name = "Apartments",  NameAr = "شقق",            Slug = "apartments",  IconClass = "bi-building" },
+                new Category { Name = "Houses",      NameAr = "منازل وفيلات",    Slug = "houses",      IconClass = "bi-house-door" },
+                new Category { Name = "Vehicles",    NameAr = "سيارات",          Slug = "vehicles",    IconClass = "bi-car-front" },
+                new Category { Name = "Electronics", NameAr = "إلكترونيات",      Slug = "electronics", IconClass = "bi-laptop" },
+                new Category { Name = "Furniture",   NameAr = "أثاث",            Slug = "furniture",   IconClass = "bi-lamp" },
+                new Category { Name = "Other",       NameAr = "أخرى",            Slug = "other",       IconClass = "bi-box" }
             );
             await ctx.SaveChangesAsync();
         }

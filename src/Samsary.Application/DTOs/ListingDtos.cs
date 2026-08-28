@@ -2,7 +2,7 @@ using Samsary.Domain.Enums;
 
 namespace Samsary.Application.DTOs;
 
-public record CategoryDto(int Id, string Name, string Slug, string? IconClass);
+public record CategoryDto(int Id, string Name, string? NameAr, string Slug, string? IconClass);
 
 public record ListingMediaDto(int Id, string Url, string PublicId, MediaType MediaType, double? DurationSeconds, string? ThumbnailUrl);
 
@@ -21,7 +21,9 @@ public record ListingDto(
     string OwnerDisplayName,
     string? OwnerAvatarUrl,
     DateTime CreatedAt,
-    IList<ListingMediaDto> Media);
+    IList<ListingMediaDto> Media,
+    int ViewCount = 0,
+    bool IsFavorited = false);
 
 public record CreateListingDto(
     string Title,
@@ -42,3 +44,17 @@ public record UpdateListingDto(
     string? Location);
 
 public record RejectListingDto(string Reason);
+
+public record CreateCategoryDto(string Name, string? NameAr, string Slug, string? IconClass);
+
+public record UpdateCategoryDto(string Name, string? NameAr, string Slug, string? IconClass);
+
+public record AdminCreateListingDto(
+    string OwnerId,
+    string Title,
+    string Description,
+    decimal Price,
+    string Currency,
+    ListingType Type,
+    int CategoryId,
+    string? Location);

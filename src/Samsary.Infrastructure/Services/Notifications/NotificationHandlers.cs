@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Samsary.Application.Common.Interfaces;
 using Samsary.Application.Common.Messaging;
 using Samsary.Domain.Entities;
 using Samsary.Domain.Enums;
+using Samsary.Infrastructure.Hubs;
 using Wolverine;
 
 namespace Samsary.Infrastructure.Services.Notifications;
@@ -66,11 +68,12 @@ public class NotificationHandlers
             $"<p>You have an unread message from <strong>{e.SenderName}</strong>:</p><blockquote>{e.Preview}</blockquote><p><a href=\"/chat/{e.SenderId}\">Reply now</a></p>");
     }
 
-    /// <summary>Fans out a newly approved listing to all matching, active alert subscribers.</summary>
+    /// <summary>Fans out a newly approved listing to alert subscribers, then broadcasts to all connected users.</summary>
     public async Task Handle(
         ListingApprovedEvent e,
         IApplicationDbContext db,
         INotificationService notif,
+        IHubContext<NotificationHub> hub,
         ILogger<NotificationHandlers> logger)
     {
         var listing = await db.Listings
@@ -134,6 +137,18 @@ public class NotificationHandlers
         await db.SaveChangesAsync();
         logger.LogInformation("ListingApprovedEvent: dispatched {Count} alerts for listing {ListingId}",
             matchingAlerts.Count, e.ListingId);
+
+        // Broadcast lightweight event to all connected users for real-time feed update.
+        await hub.Clients.All.SendAsync("newListing", new
+        {
+            id       = listing.Id,
+            title    = listing.Title,
+            category = listing.Category?.Name,
+            price    = listing.Price,
+            currency = listing.Currency,
+            type     = (int)listing.Type,
+            location = listing.Location
+        });
     }
 
     private static string BuildAlertEmailHtml(string title, int id, string? category)

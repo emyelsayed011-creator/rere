@@ -48,8 +48,11 @@ const EN: Dict = {
   'nav.language': 'Language',
 
   // Home
-  'home.heroTitle': 'Buy, sell & rent — beautifully.',
-  'home.heroSubtitle': 'Post your items with photos and videos. Reach real people. Talk in real time.',
+  'home.heroTitle': 'Buy, Sell & Rent Property',
+  'home.heroSubtitle': 'Post your property with photos and videos. Reach real people.',
+  'home.realEstatePlatform': 'Real Estate Platform',
+  'home.newListingAlert': 'New listing available!',
+  'home.viewListing': 'View',
   'home.browse': 'Browse',
   'home.postListing': 'Post a listing',
   'home.categories': 'Categories',
@@ -58,6 +61,7 @@ const EN: Dict = {
   'home.statListings': 'Listings',
   'home.statLive': 'Real-time chat',
   'home.statSecure': 'Secure & moderated',
+  'home.statSecureVal': '100%',
 
   // Listings
   'listings.mine': 'My listings',
@@ -178,6 +182,46 @@ const EN: Dict = {
   'admin.colIp': 'IP',
   'admin.colMessage': 'Message',
   'admin.noLogs': 'No logs',
+
+  // Moderators
+  'admin.moderators': 'Moderators',
+  'admin.moderatorsDesc': 'Grant trusted users limited admin access.',
+  'admin.addModerator': 'Add moderator',
+  'admin.modUserSearch': 'User',
+  'admin.modSearchPlaceholder': 'Search by email…',
+  'admin.modPermissions': 'Permissions',
+  'admin.noModerators': 'No moderators yet.',
+  'admin.modUser': 'User',
+  'admin.modCreatedAt': 'Added',
+  'admin.editPermissions': 'Edit permissions',
+  'admin.permManageListings': 'Manage listings',
+  'admin.permManageUsers': 'Manage users',
+  'admin.permManageReviews': 'Manage reviews',
+  'admin.permViewLogs': 'View logs',
+  'admin.permManageAds': 'Manage ads',
+  'common.actions': 'Actions',
+
+  // Form extras
+  'form.locationPlaceholder': 'e.g. Cairo, Nasr City',
+  'form.detectLocation': 'Detect my location',
+  'auth.signInToContinue': 'Sign in to your account to continue.',
+  'auth.emailPlaceholder': 'your@email.com',
+  'auth.passwordPlaceholder': 'Min. 8 characters',
+
+  // Admin theme
+  'admin.theme': 'Branding & Theme',
+  'admin.themeSiteName': 'Site Name',
+  'admin.themeLogoUrl': 'Logo URL',
+  'admin.themeLogoHint': 'Paste a direct image URL (PNG/SVG recommended)',
+  'admin.themePrimary': 'Primary Color',
+  'admin.themeAccent': 'Accent / Gold Color',
+  'admin.themeFont': 'Font Family',
+  'admin.themeFontSize': 'Base Font Size',
+  'admin.themePreview': 'Preview',
+
+  // Map
+  'form.pickOnMap': 'Pick on map',
+  'form.mapHint': 'Click the map to set the location, or drag the marker.',
 };
 
 const AR: Dict = {
@@ -223,8 +267,11 @@ const AR: Dict = {
   'nav.language': 'اللغة',
 
   // Home
-  'home.heroTitle': 'بيع، شراء وإيجار — بأناقة.',
-  'home.heroSubtitle': 'انشر منتجاتك بالصور والفيديو. تواصل مع أشخاص حقيقيين. تحدّث في الوقت الفعلي.',
+  'home.heroTitle': 'بيع، شراء وإيجار عقارات',
+  'home.heroSubtitle': 'انشر عقارك بالصور والفيديو. تواصل مع أشخاص حقيقيين.',
+  'home.realEstatePlatform': 'منصة عقارية',
+  'home.newListingAlert': 'إعلان جديد!',
+  'home.viewListing': 'عرض',
   'home.browse': 'تصفح',
   'home.postListing': 'أضف إعلاناً',
   'home.categories': 'الفئات',
@@ -233,6 +280,7 @@ const AR: Dict = {
   'home.statListings': 'إعلانات',
   'home.statLive': 'محادثة فورية',
   'home.statSecure': 'آمن ومُراقَب',
+  'home.statSecureVal': '100%',
 
   // Listings
   'listings.mine': 'إعلاناتي',
@@ -353,6 +401,46 @@ const AR: Dict = {
   'admin.colIp': 'IP',
   'admin.colMessage': 'الرسالة',
   'admin.noLogs': 'لا توجد سجلات',
+
+  // Moderators
+  'admin.moderators': 'المشرفون',
+  'admin.moderatorsDesc': 'امنح مستخدمين موثوقين صلاحيات إدارية محدودة.',
+  'admin.addModerator': 'إضافة مشرف',
+  'admin.modUserSearch': 'المستخدم',
+  'admin.modSearchPlaceholder': 'ابحث بالبريد…',
+  'admin.modPermissions': 'الصلاحيات',
+  'admin.noModerators': 'لا يوجد مشرفون بعد.',
+  'admin.modUser': 'المستخدم',
+  'admin.modCreatedAt': 'تاريخ الإضافة',
+  'admin.editPermissions': 'تعديل الصلاحيات',
+  'admin.permManageListings': 'إدارة الإعلانات',
+  'admin.permManageUsers': 'إدارة المستخدمين',
+  'admin.permManageReviews': 'إدارة التقييمات',
+  'admin.permViewLogs': 'عرض السجلات',
+  'admin.permManageAds': 'إدارة الإعلانات المدفوعة',
+  'common.actions': 'إجراءات',
+
+  // Form extras
+  'form.locationPlaceholder': 'مثال: القاهرة، مدينة نصر',
+  'form.detectLocation': 'تحديد موقعي',
+  'auth.signInToContinue': 'سجّل دخولك للمتابعة.',
+  'auth.emailPlaceholder': 'your@email.com',
+  'auth.passwordPlaceholder': 'بحد أدناه ٨ أحرف',
+
+  // Admin theme
+  'admin.theme': 'الهوية البصرية',
+  'admin.themeSiteName': 'اسم المنصة',
+  'admin.themeLogoUrl': 'رابط الشعار',
+  'admin.themeLogoHint': 'الصق رابط صورة مباشر (PNG/SVG مفضّل)',
+  'admin.themePrimary': 'اللون الرئيسي',
+  'admin.themeAccent': 'لون التمييز / الذهبي',
+  'admin.themeFont': 'الخط',
+  'admin.themeFontSize': 'حجم الخط الأساسي',
+  'admin.themePreview': 'معاينة',
+
+  // Map
+  'form.pickOnMap': 'اختر من الخريطة',
+  'form.mapHint': 'اضغط على الخريطة لتحديد الموقع أو اسحب العلامة.',
 };
 
 const DICTS: Record<Lang, Dict> = { en: EN, ar: AR };

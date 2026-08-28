@@ -7,33 +7,30 @@ import { TranslatePipe } from '../../core/i18n.service';
   standalone: true,
   imports: [TranslatePipe],
   template: `
-    <h4 class="mb-3 fw-bold">{{ 'admin.dashboard' | t }}</h4>
-    @if (stats(); as s) {
+    <h4 class="mb-4 fw-bold">{{ 'admin.dashboard' | t }}</h4>
+
+    @if (loading()) {
+      <div class="text-center py-5"><span class="spinner-border text-primary"></span></div>
+    } @else if (error()) {
+      <div class="alert alert-danger">{{ error() }}</div>
+    } @else if (stats(); as s) {
       <div class="row g-3">
-        <div class="col-6 col-md-3"><div class="card border-0 shadow-sm hover-lift"><div class="card-body">
-          <div class="text-muted small">{{ 'admin.users.count' | t }}</div><div class="fs-3 fw-bold">{{ s.users }}</div>
-        </div></div></div>
-        <div class="col-6 col-md-3"><div class="card border-0 shadow-sm hover-lift"><div class="card-body">
-          <div class="text-muted small">{{ 'admin.blocked' | t }}</div><div class="fs-3 fw-bold text-danger">{{ s.blockedUsers }}</div>
-        </div></div></div>
-        <div class="col-6 col-md-3"><div class="card border-0 shadow-sm hover-lift"><div class="card-body">
-          <div class="text-muted small">{{ 'admin.listings' | t }}</div><div class="fs-3 fw-bold">{{ s.listings }}</div>
-        </div></div></div>
-        <div class="col-6 col-md-3"><div class="card border-0 shadow-sm hover-lift"><div class="card-body">
-          <div class="text-muted small">{{ 'admin.pending' | t }}</div><div class="fs-3 fw-bold text-warning">{{ s.pendingListings }}</div>
-        </div></div></div>
-        <div class="col-6 col-md-3"><div class="card border-0 shadow-sm hover-lift"><div class="card-body">
-          <div class="text-muted small">{{ 'admin.approved' | t }}</div><div class="fs-3 fw-bold text-success">{{ s.approvedListings }}</div>
-        </div></div></div>
-        <div class="col-6 col-md-3"><div class="card border-0 shadow-sm hover-lift"><div class="card-body">
-          <div class="text-muted small">{{ 'admin.rejected' | t }}</div><div class="fs-3 fw-bold text-secondary">{{ s.rejectedListings }}</div>
-        </div></div></div>
-        <div class="col-6 col-md-3"><div class="card border-0 shadow-sm hover-lift"><div class="card-body">
-          <div class="text-muted small">{{ 'admin.messages' | t }}</div><div class="fs-3 fw-bold">{{ s.chatMessages }}</div>
-        </div></div></div>
-        <div class="col-6 col-md-3"><div class="card border-0 shadow-sm hover-lift"><div class="card-body">
-          <div class="text-muted small">{{ 'admin.notifications' | t }}</div><div class="fs-3 fw-bold">{{ s.notifications }}</div>
-        </div></div></div>
+        @for (card of statCards(s); track card.key) {
+          <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100 hover-lift">
+              <div class="card-body d-flex align-items-center gap-3">
+                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                     [style]="'width:44px;height:44px;background:' + card.bg">
+                  <i [class]="'bi ' + card.icon" [style]="'color:' + card.color + ';font-size:1.2rem'"></i>
+                </div>
+                <div>
+                  <div class="text-muted small">{{ card.label | t }}</div>
+                  <div class="fs-4 fw-bold" [style]="'color:' + card.color">{{ card.value }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
       </div>
     }
   `
@@ -41,5 +38,26 @@ import { TranslatePipe } from '../../core/i18n.service';
 export class AdminDashboardComponent implements OnInit {
   private api = inject(ApiService);
   stats = signal<any | null>(null);
-  ngOnInit() { this.api.adminDashboard().subscribe(s => this.stats.set(s)); }
+  loading = signal(true);
+  error = signal<string | null>(null);
+
+  ngOnInit() {
+    this.api.adminDashboard().subscribe({
+      next: s => { this.stats.set(s); this.loading.set(false); },
+      error: e => { this.error.set(e?.error?.detail || 'Failed to load dashboard.'); this.loading.set(false); }
+    });
+  }
+
+  statCards(s: any) {
+    return [
+      { key: 'users',     label: 'admin.users.count',  value: s.users,           icon: 'bi-people-fill',     color: '#1a4f7a', bg: '#eaf3fb' },
+      { key: 'blocked',   label: 'admin.blocked',       value: s.blockedUsers,    icon: 'bi-slash-circle',    color: '#dc3545', bg: '#fde8ea' },
+      { key: 'listings',  label: 'admin.listings',      value: s.listings,        icon: 'bi-house-fill',      color: '#198754', bg: '#e6f4ec' },
+      { key: 'pending',   label: 'admin.pending',       value: s.pendingListings, icon: 'bi-hourglass-split', color: '#fd7e14', bg: '#fff3e0' },
+      { key: 'approved',  label: 'admin.approved',      value: s.approvedListings,icon: 'bi-check-circle',    color: '#198754', bg: '#e6f4ec' },
+      { key: 'rejected',  label: 'admin.rejected',      value: s.rejectedListings,icon: 'bi-x-circle',        color: '#6c757d', bg: '#f0f0f0' },
+      { key: 'messages',  label: 'admin.messages',      value: s.chatMessages,    icon: 'bi-chat-dots-fill',  color: '#0d6efd', bg: '#e7f1ff' },
+      { key: 'notifs',    label: 'admin.notifications', value: s.notifications,   icon: 'bi-bell-fill',       color: '#c9991f', bg: '#fef9e7' },
+    ];
+  }
 }

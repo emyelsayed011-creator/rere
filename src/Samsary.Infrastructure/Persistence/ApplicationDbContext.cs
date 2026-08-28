@@ -25,6 +25,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<UserBan> UserBans => Set<UserBan>();
     public DbSet<ModeratorProfile> ModeratorProfiles => Set<ModeratorProfile>();
+    public DbSet<ThemeSettings> ThemeSettings => Set<ThemeSettings>();
 
     DbSet<ApplicationUser> IApplicationDbContext.Users => Users;
 

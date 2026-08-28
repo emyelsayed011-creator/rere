@@ -1,7 +1,9 @@
-import { Injectable, signal, effect } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject, signal, effect } from '@angular/core';
+import { environment } from '../../environments/environment';
 
 export type Theme = 'light' | 'dark';
-export type ColorTheme = 'rose' | 'ocean' | 'forest' | 'sunset' | 'violet' | 'midnight' | 'gold';
+export type ColorTheme = 'rose' | 'ocean' | 'forest' | 'sunset' | 'violet' | 'midnight' | 'gold' | 'custom';
 
 export interface ColorThemeMeta {
   id: ColorTheme;
@@ -21,13 +23,24 @@ export const COLOR_THEMES: ColorThemeMeta[] = [
   { id: 'gold',     label: 'Gold',     primary: '#f59e0b', accent: '#d97706', gradient: 'linear-gradient(135deg,#f59e0b,#d97706)' },
 ];
 
+export interface AdminTheme {
+  primaryColor: string;
+  accentColor: string;
+  logoUrl?: string;
+  siteName?: string;
+  fontFamily: string;
+  fontSizeBase: number;
+}
+
 const MODE_KEY  = 'samsary.theme';
 const COLOR_KEY = 'samsary.colorTheme';
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
+  private http = inject(HttpClient);
   private _theme      = signal<Theme>(this.initialMode());
   private _colorTheme = signal<ColorTheme>(this.initialColor());
+  readonly adminTheme = signal<AdminTheme | null>(null);
 
   readonly theme      = this._theme.asReadonly();
   readonly colorTheme = this._colorTheme.asReadonly();
@@ -35,6 +48,32 @@ export class ThemeService {
 
   constructor() {
     effect(() => this.apply(this._theme(), this._colorTheme()));
+  }
+
+  /** Load admin-configured branding from the API and apply it. */
+  loadAdminTheme() {
+    this.http.get<AdminTheme>(`${environment.apiBase}/theme`).subscribe({
+      next: t => { this.adminTheme.set(t); this.applyAdminTheme(t); },
+      error: () => {}
+    });
+  }
+
+  saveAdminTheme(t: AdminTheme) {
+    return this.http.put<AdminTheme>(`${environment.apiBase}/theme`, t);
+  }
+
+  applyAdminTheme(t: AdminTheme) {
+    const root = document.documentElement;
+    root.style.setProperty('--samsary-primary', t.primaryColor);
+    root.style.setProperty('--samsary-accent',  t.accentColor);
+    root.style.setProperty('--bs-primary',       t.primaryColor);
+    root.style.fontSize = `${t.fontSizeBase}px`;
+    const rgb = hexToRgb(t.primaryColor);
+    if (rgb) root.style.setProperty('--samsary-primary-rgb', rgb);
+    root.style.setProperty('--samsary-gradient',
+      `linear-gradient(135deg, ${t.primaryColor} 0%, ${t.accentColor} 100%)`);
+    this.adminTheme.set(t);
+    this._colorTheme.set('custom');
   }
 
   toggle() {
@@ -55,13 +94,13 @@ export class ThemeService {
   private initialMode(): Theme {
     const stored = localStorage.getItem(MODE_KEY) as Theme | null;
     if (stored === 'light' || stored === 'dark') return stored;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return 'light'; // default to light for professional real-estate look
   }
 
   private initialColor(): ColorTheme {
     const stored = localStorage.getItem(COLOR_KEY) as ColorTheme | null;
-    if (stored && COLOR_THEMES.some(c => c.id === stored)) return stored;
-    return 'rose';
+    if (stored && [...COLOR_THEMES.map(c => c.id), 'custom'].includes(stored)) return stored;
+    return 'gold';
   }
 
   private apply(t: Theme, c: ColorTheme) {
@@ -70,4 +109,9 @@ export class ThemeService {
     el.setAttribute('data-theme', t);
     el.setAttribute('data-color-theme', c);
   }
+}
+
+function hexToRgb(hex: string): string | null {
+  const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return r ? `${parseInt(r[1],16)}, ${parseInt(r[2],16)}, ${parseInt(r[3],16)}` : null;
 }
