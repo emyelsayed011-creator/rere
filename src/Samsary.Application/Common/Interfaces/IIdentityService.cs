@@ -15,7 +15,7 @@ public interface IIdentityService
     Task<Result> LogoutAsync(string refreshToken, CancellationToken cancellationToken = default);
     Task<Result<UserDto>> GetByIdAsync(string userId, CancellationToken cancellationToken = default);
     Task<Result<UserDto>> UpdateProfileAsync(string userId, string displayName, string? bio, string? avatarUrl,
-        DateTime? dateOfBirth, string? gender, string? country, CancellationToken cancellationToken = default);
+        DateTime? dateOfBirth, string? gender, string? country, string? phoneNumber, CancellationToken cancellationToken = default);
     Task<Result<UserDto>> SetAvatarAsync(string userId, string avatarUrl, CancellationToken cancellationToken = default);
     Task<Result> ChangePasswordAsync(string userId, string currentPassword, string newPassword, CancellationToken cancellationToken = default);
     Task<Result> SendEmailVerificationAsync(string userId, CancellationToken cancellationToken = default);

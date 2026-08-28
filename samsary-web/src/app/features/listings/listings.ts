@@ -28,7 +28,7 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
           <div class="col-md-3">
             <select class="form-select" [(ngModel)]="categoryId" (change)="reload()">
               <option [ngValue]="null">{{ 'listings.allCategories' | t }}</option>
-              @for (c of categories(); track c.id) { <option [ngValue]="c.id">{{ c.name }}</option> }
+              @for (c of categories(); track c.id) { <option [ngValue]="c.id">{{ categoryName(c) }}</option> }
             </select>
           </div>
           <div class="col-md-3">
@@ -70,7 +70,7 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
             </div>
             <div class="card-body">
               <h6 class="card-title mb-1 text-truncate">{{ l.title }}</h6>
-              <div class="text-muted small text-truncate"><i class="bi bi-tag me-1"></i>{{ l.category.name }} · {{ l.location || '—' }}</div>
+              <div class="text-muted small text-truncate"><i class="bi bi-tag me-1"></i>{{ categoryName(l.category) }} · {{ l.location || '—' }}</div>
               <div class="fw-bold text-primary mt-2 fs-5">{{ l.price | number }} {{ l.currency }}</div>
             </div>
           </a>
@@ -135,6 +135,10 @@ export class ListingsComponent implements OnInit {
     if (p < 1 || p > this.totalPages()) return;
     this.page.set(p);
     this.reload();
+  }
+
+  categoryName(category: Category) {
+    return this.i18n.lang() === 'ar' ? (category.nameAr?.trim() || category.name) : category.name;
   }
 
   statusLabel(s: ListingStatus) {

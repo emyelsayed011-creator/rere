@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -30,7 +31,12 @@ public static class DependencyInjection
 
         // Database with Wolverine outbox integration
         services.AddDbContextWithWolverineIntegration<ApplicationDbContext>(opt =>
-            opt.UseNpgsql(configuration.GetConnectionString("Default")));
+        {
+            opt.UseNpgsql(configuration.GetConnectionString("Default"));
+            // Suppress pending model changes warning during initialization
+            // (will be resolved once migrations are properly synced)
+            opt.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+        });
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<ApplicationDbContext>());
 
@@ -93,37 +99,44 @@ public static class DependencyInjection
         services.AddSingleton<IBadWordFilter, BadWordFilter>();
     }
 
-    private static void AddJwtAuthentication(IServiceCollection services, IConfiguration configuration)
+    private static void AddJwtAuthentication(IServiceCollection services, IConfiguration config)
     {
-        var jwt = configuration.GetSection("Jwt").Get<JwtSettings>()!;
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(o =>
+        var jwt = config.GetSection("Jwt").Get<JwtSettings>()!;
+
+        // AddIdentity sets up cookie auth and Identity.Application scheme.
+        // We need to add JWT Bearer and set it as the default for API endpoints.
+        services.AddAuthentication(o =>
+        {
+            o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            o.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(o =>
+        {
+            o.SaveToken = true;
+            o.TokenValidationParameters = new TokenValidationParameters
             {
-                o.SaveToken = true;
-                o.TokenValidationParameters = new TokenValidationParameters
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwt.Issuer,
+                ValidAudience = jwt.Audience,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SigningKey)),
+                ClockSkew = TimeSpan.FromMinutes(1)
+            };
+            o.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
                 {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
-                    ValidIssuer = jwt.Issuer,
-                    ValidAudience = jwt.Audience,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SigningKey)),
-                    ClockSkew = TimeSpan.FromMinutes(1)
-                };
-                o.Events = new JwtBearerEvents
-                {
-                    OnMessageReceived = context =>
+                    var accessToken = context.Request.Query["access_token"];
+                    var path = context.HttpContext.Request.Path;
+                    if (!string.IsNullOrEmpty(accessToken) &&
+                        (path.StartsWithSegments("/hubs/chat") || path.StartsWithSegments("/hubs/notifications")))
                     {
-                        var accessToken = context.Request.Query["access_token"];
-                        var path = context.HttpContext.Request.Path;
-                        if (!string.IsNullOrEmpty(accessToken) &&
-                            (path.StartsWithSegments("/hubs/chat") || path.StartsWithSegments("/hubs/notifications")))
-                        {
-                            context.Token = accessToken;
-                        }
-                        return Task.CompletedTask;
+                        context.Token = accessToken;
                     }
+                    return Task.CompletedTask;
+                }
                 };
             });
         services.AddAuthorization();

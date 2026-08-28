@@ -57,24 +57,26 @@ const CURRENCIES = [
             </select>
           </div>
           <div class="col-md-6">
-            <label class="form-label fw-medium">{{ 'form.location' | t }}</label>
-            <div class="input-group mb-2">
-              <input class="form-control" formControlName="location" maxlength="200"
-                     [placeholder]="'form.locationPlaceholder' | t">
-              <button type="button" class="btn btn-outline-secondary" (click)="detectLocation()"
-                      [title]="'form.detectLocation' | t" [disabled]="locating()">
-                @if (locating()) { <span class="spinner-border spinner-border-sm"></span> }
-                @else { <i class="bi bi-geo-alt-fill"></i> }
-              </button>
-              <button type="button" class="btn btn-outline-primary" (click)="toggleMap()"
-                      [title]="'form.pickOnMap' | t">
-                <i class="bi bi-map"></i>
-              </button>
+            <div class="listing-form-panel h-100">
+              <label class="form-label fw-medium">{{ 'form.location' | t }}</label>
+              <div class="input-group mb-2">
+                <input class="form-control" formControlName="location" maxlength="200"
+                       [placeholder]="'form.locationPlaceholder' | t">
+                <button type="button" class="btn btn-outline-secondary" (click)="detectLocation()"
+                        [title]="'form.detectLocation' | t" [disabled]="locating()">
+                  @if (locating()) { <span class="spinner-border spinner-border-sm"></span> }
+                  @else { <i class="bi bi-geo-alt-fill"></i> }
+                </button>
+                <button type="button" class="btn btn-outline-primary" (click)="toggleMap()"
+                        [title]="'form.pickOnMap' | t">
+                  <i class="bi bi-map"></i>
+                </button>
+              </div>
+              @if (showMap()) {
+                <div class="small text-muted mb-1"><i class="bi bi-info-circle me-1"></i>{{ 'form.mapHint' | t }}</div>
+                <div #mapEl style="height:260px;border-radius:.75rem;overflow:hidden;border:1px solid #dee2e6"></div>
+              }
             </div>
-            @if (showMap()) {
-              <div class="small text-muted mb-1"><i class="bi bi-info-circle me-1"></i>{{ 'form.mapHint' | t }}</div>
-              <div #mapEl style="height:260px;border-radius:.75rem;overflow:hidden;border:1px solid #dee2e6"></div>
-            }
           </div>
           <div class="col-12">
             <label class="form-label fw-medium">{{ 'form.description' | t }}</label>
@@ -101,7 +103,7 @@ const CURRENCIES = [
           <div class="alert alert-info small mb-3">
             <i class="bi bi-info-circle me-1"></i>{{ 'form.videoInfo' | t }}
           </div>
-          <div class="row g-3 mb-3">
+          <div class="row g-3 mb-3 listing-media-box">
             <div class="col-md-6">
               <label class="form-label">{{ 'form.addImage' | t }}</label>
               <input type="file" class="form-control" accept="image/*" (change)="uploadImg($event, listing.id)">
@@ -236,7 +238,15 @@ export class ListingFormComponent implements OnInit, OnDestroy {
       attribution: '© OpenStreetMap contributors'
     }).addTo(this.map);
 
-    this.marker = L.marker([lat, lng], { draggable: true }).addTo(this.map);
+    this.marker = L.marker([lat, lng], {
+      draggable: true,
+      icon: L.divIcon({
+        className: 'custom-map-pin',
+        iconSize: [18, 18],
+        iconAnchor: [9, 18],
+        html: '<span></span>'
+      })
+    }).addTo(this.map);
     this.marker.on('dragend', () => {
       const { lat: la, lng: lo } = this.marker!.getLatLng();
       this.form.patchValue({ location: `${la.toFixed(5)}, ${lo.toFixed(5)}` });
@@ -276,7 +286,7 @@ export class ListingFormComponent implements OnInit, OnDestroy {
         if (apiErrors) this.validationErrors.set(
           Object.fromEntries(Object.entries(apiErrors).map(([k, v]) => [k.toLowerCase(), v as string[]]))
         );
-        this.error.set(e?.error?.detail || e?.error?.title || 'Failed to save.');
+        this.error.set(e?.error?.detail || e?.error?.title || this.i18n.t('form.saveFailed'));
         this.saving.set(false);
       }
     });
@@ -288,7 +298,7 @@ export class ListingFormComponent implements OnInit, OnDestroy {
     this.mediaError.set(null);
     this.api.uploadImage(id, file).subscribe({
       next: () => this.refresh(id),
-      error: e => this.mediaError.set(e?.error?.detail || 'Image upload failed.')
+      error: e => this.mediaError.set(e?.error?.detail || this.i18n.t('form.imageFailed'))
     });
   }
 
@@ -299,7 +309,7 @@ export class ListingFormComponent implements OnInit, OnDestroy {
     this.uploadingVid.set(true);
     this.api.uploadVideo(id, file).subscribe({
       next: () => { this.uploadingVid.set(false); this.refresh(id); },
-      error: e => { this.uploadingVid.set(false); this.mediaError.set(e?.error?.detail || 'Video upload failed.'); }
+      error: e => { this.uploadingVid.set(false); this.mediaError.set(e?.error?.detail || this.i18n.t('form.videoFailed')); }
     });
   }
 

@@ -13,7 +13,8 @@ import { I18nService, TranslatePipe } from '../core/i18n.service';
     <nav class="navbar navbar-expand-lg sticky-top shadow-sm">
       <div class="container">
         <a class="navbar-brand navbar-brand-samsary" routerLink="/">
-          <i class="bi bi-buildings-fill me-1"></i>سمسارة
+          <span class="navbar-brand-icon"><i class="bi bi-buildings-fill"></i></span>
+          <span class="navbar-brand-text">سمسارة</span>
         </a>
         <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
           <span class="navbar-toggler-icon"></span>
@@ -53,13 +54,13 @@ import { I18nService, TranslatePipe } from '../core/i18n.service';
                 </a>
               </li>
               <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle d-flex align-items-center" data-bs-toggle="dropdown">
+                <a class="nav-link dropdown-toggle user-menu-toggle d-flex align-items-center" data-bs-toggle="dropdown">
                   @if (auth.user()?.avatarUrl) {
-                    <img [src]="auth.user()!.avatarUrl" class="rounded-circle me-2" width="28" height="28" alt="">
+                    <img [src]="auth.user()!.avatarUrl" class="rounded-circle user-avatar" width="28" height="28" alt="">
                   } @else {
-                    <i class="bi bi-person-circle fs-4 me-2"></i>
+                    <i class="bi bi-person-circle fs-4 user-avatar"></i>
                   }
-                  <span class="d-none d-md-inline">{{ auth.user()?.displayName }}</span>
+                  <span class="user-name d-none d-md-inline" dir="ltr" lang="en">{{ auth.user()?.displayName }}</span>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end">
                   <li><a class="dropdown-item" routerLink="/profile"><i class="bi bi-person me-2"></i>{{ 'nav.profile' | t }}</a></li>
@@ -108,7 +109,7 @@ export class NavbarComponent implements OnInit {
   private refreshUnread() {
     this.api.notifications(true).subscribe({
       next: r => (this.unread as any).set(r.unread),
-      error: () => {}
+      error: () => { }
     });
   }
 

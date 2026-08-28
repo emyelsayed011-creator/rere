@@ -41,6 +41,10 @@ import { TranslatePipe, I18nService } from '../core/i18n.service';
                 <input class="form-control" formControlName="displayName">
               </div>
               <div class="mb-3">
+                <label class="form-label">{{ 'profile.phoneNumber' | t }}</label>
+                <input class="form-control" type="tel" formControlName="phoneNumber" placeholder="+966 5xx xxx xxx">
+              </div>
+              <div class="mb-3">
                 <label class="form-label">{{ 'profile.bio' | t }}</label>
                 <textarea class="form-control" rows="3" formControlName="bio"></textarea>
               </div>
@@ -90,6 +94,7 @@ export class ProfileComponent {
 
   form = this.fb.nonNullable.group({
     displayName: [this.auth.user()?.displayName ?? '', [Validators.required, Validators.maxLength(80)]],
+    phoneNumber: [this.auth.user()?.phoneNumber ?? '', [Validators.required, Validators.pattern(/^[0-9+()\-\s]{7,20}$/)]],
     bio: [this.auth.user()?.bio ?? '']
   });
 

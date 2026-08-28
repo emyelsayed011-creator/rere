@@ -8,7 +8,19 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
   const router = inject(Router);
   const token = auth.token();
-  const authed = token ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : req;
+
+  // Always add Authorization header if token exists
+  let authed = req;
+  if (token) {
+    authed = req.clone({ 
+      setHeaders: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      withCredentials: true
+    });
+  }
+
   return next(authed).pipe(
     catchError((err: HttpErrorResponse) => {
       if (err.status === 401 && auth.isAuthenticated()) {

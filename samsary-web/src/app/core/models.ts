@@ -40,6 +40,7 @@ export interface AuthUser {
   dateOfBirth?: string;
   gender?: string;
   country?: string;
+  phoneNumber?: string;
   /** Bitmask of ModeratorPermission — present only for Moderator role users. */
   modPermissions?: number;
 }
@@ -85,13 +86,13 @@ export interface BanRecord {
 
 // ── Moderator permission flags (mirrors backend enum) ──────────────────────
 export enum ModeratorPermission {
-  None           = 0,
+  None = 0,
   ManageListings = 1 << 0,
-  ManageUsers    = 1 << 1,
-  ManageReviews  = 1 << 2,
-  ViewLogs       = 1 << 3,
-  ManageAds      = 1 << 4,
-  All            = (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4)
+  ManageUsers = 1 << 1,
+  ManageReviews = 1 << 2,
+  ViewLogs = 1 << 3,
+  ManageAds = 1 << 4,
+  All = (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4)
 }
 
 export interface Moderator {

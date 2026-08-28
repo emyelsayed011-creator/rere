@@ -23,7 +23,7 @@ public class UsersController : ApiControllerBase
     [HttpPut("me")]
     public async Task<IActionResult> Update(UpdateProfileDto dto, CancellationToken ct)
         => HandleResult(await _sender.Send(
-            new UpdateProfileCommand(dto.DisplayName, dto.Bio, dto.AvatarUrl, dto.DateOfBirth, dto.Gender, dto.Country), ct));
+            new UpdateProfileCommand(dto.DisplayName, dto.Bio, dto.AvatarUrl, dto.DateOfBirth, dto.Gender, dto.Country, dto.PhoneNumber), ct));
 
     [HttpPost("me/avatar")]
     [RequestSizeLimit(10 * 1024 * 1024)]

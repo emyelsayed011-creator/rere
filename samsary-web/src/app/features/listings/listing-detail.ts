@@ -49,7 +49,7 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
                 <div>
                   <h3 class="mb-1">{{ l.title }}</h3>
                   <div class="text-muted small">
-                    <i class="bi bi-tag"></i> {{ l.category.name }} ·
+                    <i class="bi bi-tag"></i> {{ categoryName(l.category) }} ·
                     <i class="bi bi-geo-alt"></i> {{ l.location || '—' }} ·
                     {{ 'detail.posted' | t }} {{ l.createdAt | date:'medium' }}
                   </div>
@@ -116,6 +116,10 @@ export class ListingDetailComponent implements OnInit {
   message = '';
   sending = signal(false);
   MediaType = MediaType;
+
+  categoryName(category: Listing['category']) {
+    return this.i18n.lang() === 'ar' ? (category.nameAr?.trim() || category.name) : category.name;
+  }
 
   ngOnInit() {
     const id = +this.route.snapshot.paramMap.get('id')!;

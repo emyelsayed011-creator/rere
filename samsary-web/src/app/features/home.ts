@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
 import { RealtimeService } from '../core/realtime.service';
 import { Category, Listing } from '../core/models';
-import { TranslatePipe } from '../core/i18n.service';
+import { I18nService, TranslatePipe } from '../core/i18n.service';
 
 @Component({
   selector: 'app-home',
@@ -48,7 +48,7 @@ import { TranslatePipe } from '../core/i18n.service';
           <select class="hero-search-select" [(ngModel)]="heroCategory" #heroSel
                   style="appearance:auto">
             <option value="">{{ 'listings.allCategories' | t }}</option>
-            @for (c of categories(); track c.id) { <option [value]="c.id">{{ c.name }}</option> }
+            @for (c of categories(); track c.id) { <option [value]="c.id">{{ categoryName(c) }}</option> }
           </select>
           <input class="hero-search-input" [(ngModel)]="heroQ" [placeholder]="'listings.searchPlaceholder' | t"
                  (keydown.enter)="heroSearch()">
@@ -86,7 +86,7 @@ import { TranslatePipe } from '../core/i18n.service';
             <div class="category-tile-re-icon">
               <i class="bi {{ c.iconClass || 'bi-tag' }}"></i>
             </div>
-            <div class="category-tile-re-name">{{ c.name }}</div>
+            <div class="category-tile-re-name">{{ categoryName(c) }}</div>
           </a>
         </div>
       }
@@ -112,7 +112,7 @@ import { TranslatePipe } from '../core/i18n.service';
               </span>
             </div>
             <div class="prop-card-body">
-              <div class="prop-card-cat">{{ l.category.name }}</div>
+              <div class="prop-card-cat">{{ categoryName(l.category) }}</div>
               <h6 class="prop-card-title">{{ l.title }}</h6>
               @if (l.location) {
                 <div class="prop-card-loc"><i class="bi bi-geo-alt me-1"></i>{{ l.location }}</div>
@@ -242,12 +242,17 @@ import { TranslatePipe } from '../core/i18n.service';
 export class HomeComponent implements OnInit {
   private api = inject(ApiService);
   private rt = inject(RealtimeService);
+  private i18n = inject(I18nService);
   categories = signal<Category[]>([]);
   latest = signal<Listing[]>([]);
   totalListings = signal(0);
   toastListing = signal<any | null>(null);
   heroQ = '';
   heroCategory = '';
+
+  categoryName(category: Category) {
+    return this.i18n.lang() === 'ar' ? (category.nameAr?.trim() || category.name) : category.name;
+  }
 
   constructor() {
     effect(() => {

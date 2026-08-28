@@ -67,11 +67,12 @@ builder.Host.UseWolverine(opts =>
     opts.Policies.UseDurableLocalQueues();
     opts.Discovery.IncludeAssembly(typeof(Samsary.Infrastructure.DependencyInjection).Assembly);
 });
-builder.Services.AddResourceSetupOnStartup();
+// Don't set up resources automatically on startup; let SeedData handle DB initialization first
+// builder.Services.AddResourceSetupOnStartup();
 
 const string AngularCors = "AngularCors";
 builder.Services.AddCors(o => o.AddPolicy(AngularCors, p => p
-    .WithOrigins("http://localhost:4200", "https://localhost:4200")
+    .WithOrigins("http://localhost:4200", "https://localhost:4200", "http://localhost:8080", "https://localhost:8080")
     .AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
 // ── Permission-based policies for moderator access ────────────────────────────
@@ -211,6 +212,8 @@ app.MapHealthChecks("/health");
 app.MapHub<ChatHub>("/hubs/chat");
 app.MapHub<NotificationHub>("/hubs/notifications");
 
+// Run migrations and seed data BEFORE app startup to ensure DB is ready
+// This must happen after app.Build() so DI is available, but before app.Run()
 try
 {
     await SeedData.RunAsync(app.Services, app.Configuration);
