@@ -27,11 +27,7 @@ public enum NotificationType
     ListingApproved = 1,
     ListingRejected = 2,
     NewMessage = 3,
-    Admin = 4,
-    UserBanned = 5,
-    UserUnbanned = 6,
-    ReviewDeleted = 7,
-    ListingAlert = 8
+    Admin = 4
 }
 
 public enum NotificationChannel
@@ -40,17 +36,4 @@ public enum NotificationChannel
     Email = 2,
     Sms = 4,
     WebPush = 8
-}
-
-/// <summary>Granular permissions granted to a Moderator. Combined as a bitmask; mirrors the web enum.</summary>
-[Flags]
-public enum ModeratorPermission
-{
-    None = 0,
-    ManageListings = 1 << 0,
-    ManageUsers = 1 << 1,
-    ManageReviews = 1 << 2,
-    ViewLogs = 1 << 3,
-    ManageAds = 1 << 4,
-    All = ManageListings | ManageUsers | ManageReviews | ViewLogs | ManageAds
 }

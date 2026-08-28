@@ -1,74 +1,79 @@
-using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Samsary.Api.Infrastructure;
+using Samsary.Application.Common.Models;
 using Samsary.Application.DTOs;
-using Samsary.Application.Features.Listings.Commands;
-using Samsary.Application.Features.Listings.Queries;
+using Samsary.Application.Services.Listings;
 using Samsary.Domain.Enums;
 
 namespace Samsary.Api.Controllers;
 
+[ApiController]
 [Route("api/listings")]
-public class ListingsController : ApiControllerBase
+public class ListingsController : ControllerBase
 {
-    private readonly ISender _sender;
+    private readonly IListingService _listings;
 
-    public ListingsController(ISender sender) => _sender = sender;
+    public ListingsController(IListingService listings) => _listings = listings;
 
     [HttpGet]
-    public async Task<IActionResult> Search(
+    public async Task<ActionResult<PagedResult<ListingDto>>> Search(
         [FromQuery] string? q,
         [FromQuery] int? categoryId,
         [FromQuery] ListingType? type,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 12,
         CancellationToken ct = default)
-        => HandleResult(await _sender.Send(new SearchListingsQuery(q, categoryId, type, page, pageSize), ct));
+        => Ok(await _listings.SearchAsync(q, categoryId, type, page, pageSize, ct));
 
     [HttpGet("{id:int}")]
-    public async Task<IActionResult> Get(int id, CancellationToken ct)
-        => HandleResult(await _sender.Send(new GetListingQuery(id), ct));
+    public async Task<ActionResult<ListingDto>> Get(int id, CancellationToken ct)
+        => Ok(await _listings.GetAsync(id, ct));
 
     [Authorize]
     [HttpGet("mine")]
-    public async Task<IActionResult> Mine(CancellationToken ct)
-        => HandleResult(await _sender.Send(new GetMyListingsQuery(), ct));
+    public async Task<ActionResult<IReadOnlyList<ListingDto>>> Mine(CancellationToken ct)
+        => Ok(await _listings.GetMineAsync(ct));
 
     [Authorize]
     [HttpPost]
-    public async Task<IActionResult> Create(CreateListingDto dto, CancellationToken ct)
-        => HandleResult(
-            await _sender.Send(new CreateListingCommand(
-                dto.Title, dto.Description, dto.Price, dto.Currency, dto.Type, dto.CategoryId, dto.Location), ct),
-            created => CreatedAtAction(nameof(Get), new { id = created.Id }, created));
+    public async Task<ActionResult<ListingDto>> Create(CreateListingDto dto, CancellationToken ct)
+    {
+        var created = await _listings.CreateAsync(dto, ct);
+        return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
+    }
 
     [Authorize]
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, UpdateListingDto dto, CancellationToken ct)
-        => HandleResult(await _sender.Send(new UpdateListingCommand(
-            id, dto.Title, dto.Description, dto.Price, dto.Currency, dto.Type, dto.CategoryId, dto.Location), ct));
+    public async Task<ActionResult<ListingDto>> Update(int id, UpdateListingDto dto, CancellationToken ct)
+        => Ok(await _listings.UpdateAsync(id, dto, ct));
 
     [Authorize]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
-        => HandleResult(await _sender.Send(new DeleteListingCommand(id), ct));
+    {
+        await _listings.DeleteAsync(id, ct);
+        return NoContent();
+    }
 
     [Authorize]
     [HttpPost("{id:int}/media/image")]
     [RequestSizeLimit(20 * 1024 * 1024)]
-    public async Task<IActionResult> UploadImage(int id, IFormFile file, CancellationToken ct)
-        => HandleResult(await _sender.Send(new AddListingImageCommand(id, new FormFileAdapter(file)), ct));
+    public async Task<ActionResult<ListingMediaDto>> UploadImage(int id, IFormFile file, CancellationToken ct)
+        => Ok(await _listings.AddImageAsync(id, new FormFileAdapter(file), ct));
 
     [Authorize]
     [HttpPost("{id:int}/media/video")]
     [RequestSizeLimit(200 * 1024 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = 200 * 1024 * 1024)]
-    public async Task<IActionResult> UploadVideo(int id, IFormFile file, CancellationToken ct)
-        => HandleResult(await _sender.Send(new AddListingVideoCommand(id, new FormFileAdapter(file)), ct));
+    public async Task<ActionResult<ListingMediaDto>> UploadVideo(int id, IFormFile file, CancellationToken ct)
+        => Ok(await _listings.AddVideoAsync(id, new FormFileAdapter(file), ct));
 
     [Authorize]
     [HttpDelete("{id:int}/media/{mediaId:int}")]
     public async Task<IActionResult> DeleteMedia(int id, int mediaId, CancellationToken ct)
-        => HandleResult(await _sender.Send(new DeleteListingMediaCommand(id, mediaId), ct));
+    {
+        await _listings.DeleteMediaAsync(id, mediaId, ct);
+        return NoContent();
+    }
 }

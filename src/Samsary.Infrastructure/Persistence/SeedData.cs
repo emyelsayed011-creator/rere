@@ -10,7 +10,6 @@ public static class SeedData
 {
     public const string AdminRole = "Admin";
     public const string UserRole = "User";
-    public const string ModeratorRole = "Moderator";
 
     public static async Task RunAsync(IServiceProvider services, IConfiguration config)
     {
@@ -21,7 +20,7 @@ public static class SeedData
 
         await ctx.Database.MigrateAsync();
 
-        foreach (var role in new[] { AdminRole, UserRole, ModeratorRole })
+        foreach (var role in new[] { AdminRole, UserRole })
         {
             if (!await roleMgr.RoleExistsAsync(role))
                 await roleMgr.CreateAsync(new IdentityRole(role));

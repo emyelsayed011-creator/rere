@@ -21,9 +21,7 @@ public record ListingDto(
     string OwnerDisplayName,
     string? OwnerAvatarUrl,
     DateTime CreatedAt,
-    IList<ListingMediaDto> Media,
-    int ViewCount,
-    bool IsFavorited);
+    IList<ListingMediaDto> Media);
 
 public record CreateListingDto(
     string Title,
@@ -44,17 +42,3 @@ public record UpdateListingDto(
     string? Location);
 
 public record RejectListingDto(string Reason);
-
-public record CreateCategoryDto(string Name, string Slug, string? IconClass);
-
-public record UpdateCategoryDto(string Name, string Slug, string? IconClass);
-
-public record AdminCreateListingDto(
-    string OwnerId,
-    string Title,
-    string Description,
-    decimal Price,
-    string Currency,
-    ListingType Type,
-    int CategoryId,
-    string? Location);

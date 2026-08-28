@@ -1,24 +1,25 @@
-using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Samsary.Application.Features.Chat.Queries;
+using Samsary.Application.DTOs;
+using Samsary.Application.Services.Chat;
 
 namespace Samsary.Api.Controllers;
 
+[ApiController]
 [Authorize]
 [Route("api/chat")]
-public class ChatController : ApiControllerBase
+public class ChatController : ControllerBase
 {
-    private readonly ISender _sender;
+    private readonly IChatService _chat;
 
-    public ChatController(ISender sender) => _sender = sender;
+    public ChatController(IChatService chat) => _chat = chat;
 
     [HttpGet("conversations")]
-    public async Task<IActionResult> Conversations(CancellationToken ct)
-        => HandleResult(await _sender.Send(new GetConversationsQuery(), ct));
+    public async Task<ActionResult<IReadOnlyList<ConversationDto>>> Conversations(CancellationToken ct)
+        => Ok(await _chat.GetConversationsAsync(ct));
 
     [HttpGet("with/{otherId}")]
-    public async Task<IActionResult> Thread(
+    public async Task<ActionResult<IReadOnlyList<ChatMessageDto>>> Thread(
         string otherId, [FromQuery] int take = 100, CancellationToken ct = default)
-        => HandleResult(await _sender.Send(new GetChatThreadQuery(otherId, take), ct));
+        => Ok(await _chat.GetThreadAsync(otherId, take, ct));
 }

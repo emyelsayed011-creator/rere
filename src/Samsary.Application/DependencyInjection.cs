@@ -1,7 +1,10 @@
 using FluentValidation;
-using MediatR;
 using Microsoft.Extensions.DependencyInjection;
-using Samsary.Application.Common.Messaging;
+using Samsary.Application.Services.Admin;
+using Samsary.Application.Services.Categories;
+using Samsary.Application.Services.Chat;
+using Samsary.Application.Services.Listings;
+using Samsary.Application.Services.Notifications;
 
 namespace Samsary.Application;
 
@@ -9,20 +12,17 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        var assembly = typeof(DependencyInjectionMarker).Assembly;
-
         services.AddValidatorsFromAssemblyContaining<DependencyInjectionMarker>();
 
-        // MediatR: discovers all command/query handlers in this assembly and runs the validation behavior.
-        services.AddMediatR(cfg =>
-        {
-            cfg.RegisterServicesFromAssembly(assembly);
-            cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
-        });
+        services.AddScoped<ICategoryService, CategoryService>();
+        services.AddScoped<IListingService, ListingService>();
+        services.AddScoped<IChatService, ChatService>();
+        services.AddScoped<INotificationQueryService, NotificationQueryService>();
+        services.AddScoped<IAdminService, AdminService>();
 
         return services;
     }
 }
 
-/// <summary>Marker type used to locate this assembly for validator and handler scanning.</summary>
+/// <summary>Marker type used to locate this assembly for validator scanning.</summary>
 internal sealed class DependencyInjectionMarker;

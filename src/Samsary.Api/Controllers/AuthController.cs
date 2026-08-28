@@ -1,22 +1,22 @@
-using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Samsary.Application.DTOs;
-using Samsary.Application.Features.Auth.Commands;
+using Samsary.Application.Services.Auth;
 
 namespace Samsary.Api.Controllers;
 
+[ApiController]
 [Route("api/auth")]
-public class AuthController : ApiControllerBase
+public class AuthController : ControllerBase
 {
-    private readonly ISender _sender;
+    private readonly IAuthService _auth;
 
-    public AuthController(ISender sender) => _sender = sender;
+    public AuthController(IAuthService auth) => _auth = auth;
 
     [HttpPost("register")]
-    public async Task<IActionResult> Register(RegisterDto dto, CancellationToken ct)
-        => HandleResult(await _sender.Send(new RegisterCommand(dto.Email, dto.Password, dto.DisplayName), ct));
+    public async Task<ActionResult<AuthResponseDto>> Register(RegisterDto dto, CancellationToken ct)
+        => Ok(await _auth.RegisterAsync(dto, ct));
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login(LoginDto dto, CancellationToken ct)
-        => HandleResult(await _sender.Send(new LoginCommand(dto.Email, dto.Password), ct));
+    public async Task<ActionResult<AuthResponseDto>> Login(LoginDto dto, CancellationToken ct)
+        => Ok(await _auth.LoginAsync(dto, ct));
 }
