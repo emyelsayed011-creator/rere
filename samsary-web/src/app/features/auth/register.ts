@@ -13,7 +13,7 @@ import { TranslatePipe } from '../../core/i18n.service';
     <div class="auth-split-card shadow-lg border-0 overflow-hidden">
       <div class="auth-hero d-flex flex-column align-items-center justify-content-center p-5 text-white">
         <i class="bi bi-buildings-fill mb-3" style="font-size:3.5rem;opacity:.9"></i>
-        <h2 class="fw-bold mb-1" style="letter-spacing:-.02em">سمسارة</h2>
+        <h2 class="fw-bold mb-1" style="letter-spacing:-.02em">Samsarly</h2>
         <p class="mb-4 opacity-75 small text-center">انضم إلى منصة العقارات الأولى</p>
         <div class="d-flex gap-4 text-center">
           <div><div class="fw-bold fs-5">مجاني</div><div class="opacity-65 small">التسجيل</div></div>

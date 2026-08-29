@@ -20,7 +20,7 @@ import { ThemeService } from './core/theme.service';
       <footer class="app-footer text-center py-4 mt-auto border-top">
         <div class="container">
           <div class="navbar-brand-samsary mb-1">{{ siteName() }}</div>
-          <div class="text-muted small">© {{ year }} Samsary · {{ 'app.tagline' | t }}</div>
+          <div class="text-muted small">© {{ year }} Samsarly · {{ 'app.tagline' | t }}</div>
         </div>
       </footer>
     </div>
@@ -38,8 +38,8 @@ export class App implements OnInit {
     const t = this.theme.adminTheme();
     if (!t) return 'سمسارة';
     return this.i18n.lang() === 'ar'
-      ? (t.siteNameAr || t.siteName || 'سمسارة')
-      : (t.siteName || 'Samsary');
+      ? (t.siteNameAr || t.siteName || 'سمسارلي')
+      : (t.siteName || 'Samsarly');
   }
 
   ngOnInit() {

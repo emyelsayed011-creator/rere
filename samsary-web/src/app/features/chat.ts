@@ -42,10 +42,19 @@ import { TranslatePipe } from '../core/i18n.service';
         @if (otherId()) {
           <div class="chat-thread mb-2" #thread>
             @for (m of messages(); track m.id) {
-              <div class="d-flex">
+              <div class="d-flex" [class.justify-content-end]="m.senderId === me()">
                 <div class="chat-bubble" [class.me]="m.senderId === me()" [class.them]="m.senderId !== me()">
                   <div>{{ m.body }}</div>
-                  <div class="small opacity-75 text-end mt-1">{{ m.sentAt | date:'shortTime' }}</div>
+                  <div class="d-flex align-items-center justify-content-end gap-1 mt-1">
+                    <span class="small opacity-75">{{ m.sentAt | date:'shortTime' }}</span>
+                    @if (m.senderId === me()) {
+                      @if (m.isRead) {
+                        <i class="bi bi-check2-all" style="font-size:.75rem;color:#4fc3f7"></i>
+                      } @else {
+                        <i class="bi bi-check2" style="font-size:.75rem;opacity:.5"></i>
+                      }
+                    }
+                  </div>
                 </div>
               </div>
             } @empty { <div class="text-muted text-center py-5">{{ 'chat.sayHello' | t }}</div> }
@@ -86,8 +95,17 @@ export class ChatComponent implements OnInit {
       const other = this.otherId();
       if (other && (m.senderId === other || m.receiverId === other)) {
         this.messages.update(arr => [...arr, m]);
+        // Mark incoming message read immediately if we're in this conversation
+        if (m.senderId === other) this.rt.markRead(m.id);
       }
       this.loadConversations();
+    });
+
+    // Update isRead status when sender gets notified
+    effect(() => {
+      const readId = this.rt.messageRead();
+      if (readId == null) return;
+      this.messages.update(arr => arr.map(m => m.id === readId ? { ...m, isRead: true } : m));
     });
   }
 
@@ -97,8 +115,16 @@ export class ChatComponent implements OnInit {
     this.route.paramMap.subscribe(p => {
       const id = p.get('userId');
       this.otherId.set(id);
-      if (id) this.api.thread(id).subscribe(t => this.messages.set(t));
-      else this.messages.set([]);
+      if (id) {
+        this.api.thread(id).subscribe(t => {
+          this.messages.set(t);
+          // Mark all unread incoming messages via SignalR so sender sees ✓✓
+          t.filter(m => m.senderId === id && !m.isRead)
+           .forEach(m => this.rt.markRead(m.id));
+        });
+      } else {
+        this.messages.set([]);
+      }
     });
   }
 

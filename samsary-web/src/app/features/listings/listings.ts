@@ -20,6 +20,17 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
       border-radius: .75rem .75rem 0 0; text-align: center; letter-spacing: .04em;
     }
     .listing-card:has(.sold-overlay) { opacity: .82; }
+    /* Status badge — bottom-start corner of card image */
+    .status-badge {
+      position: absolute; bottom: 8px; inset-inline-start: 8px;
+      font-size: .62rem; font-weight: 700; padding: 2px 8px;
+      border-radius: 999px; white-space: nowrap;
+      width: fit-content !important; height: auto !important; z-index: 2;
+      display: inline-flex; align-items: center;
+    }
+    .status-pending { background: rgba(255,193,7,.92);  color: #000; }
+    .status-sold    { background: rgba(220,53,69,.9);   color: #fff; }
+    .status-rented  { background: rgba(108,117,125,.9); color: #fff; }
   `],
   template: `
     <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
@@ -175,11 +186,23 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
               <span class="badge badge-type text-white" [class.bg-success]="l.type===1" [class.bg-info]="l.type===2">
                 {{ (l.type === 1 ? 'common.sell' : 'common.rentShort') | t }}
               </span>
-              @if (mineMode()) {
-                <span class="badge position-absolute top-0 end-0 m-2"
-                  [class.bg-warning]="l.status===0" [class.bg-success]="l.status===1"
-                  [class.bg-danger]="l.status===2" [class.bg-secondary]="l.status>2">
-                  {{ statusLabel(l.status) }}
+              <!-- Status badge — always visible, not just in my-listings -->
+              @if (l.status === 0) {
+                <span class="status-badge status-pending">
+                  <i class="bi bi-clock-fill me-1"></i>{{ i18n.lang() === 'ar' ? 'قيد المراجعة' : 'Pending' }}
+                </span>
+              } @else if (l.status === 3) {
+                <span class="status-badge status-sold">
+                  <i class="bi bi-check-circle-fill me-1"></i>{{ i18n.lang() === 'ar' ? 'تم البيع' : 'Sold' }}
+                </span>
+              } @else if (l.status === 4) {
+                <span class="status-badge status-rented">
+                  <i class="bi bi-check-circle-fill me-1"></i>{{ i18n.lang() === 'ar' ? 'تم التأجير' : 'Rented' }}
+                </span>
+              }
+              @if (mineMode() && l.status === 2) {
+                <span class="position-absolute top-0 end-0 m-2 badge bg-danger">
+                  {{ i18n.lang() === 'ar' ? 'مرفوض' : 'Rejected' }}
                 </span>
               }
               @if (l.status === ListingStatus.Sold || l.status === ListingStatus.Rented) {

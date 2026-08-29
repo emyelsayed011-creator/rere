@@ -75,7 +75,8 @@ import { NotificationItem } from '../core/models';
                     </div>
                     <div class="notif-panel-body">
                       @for (n of notifItems(); track n.id) {
-                        <div class="notif-row" [class.unread]="!n.isRead" (click)="openNotif(n)">
+                        <div class="notif-row" [class.unread]="!n.isRead" [class.has-link]="!!n.link"
+                             (click)="openNotif(n)">
                           <div class="notif-row-icon">
                             <i class="bi"
                                [class.bi-check2-circle]="n.type===1" [class.text-success]="n.type===1"
@@ -91,9 +92,10 @@ import { NotificationItem } from '../core/models';
                             <div class="notif-row-msg">{{ n.message }}</div>
                             <div class="notif-row-time">{{ n.createdAt | date:'shortTime' }}</div>
                           </div>
-                          @if (!n.isRead) {
-                            <div class="notif-unread-dot"></div>
-                          }
+                          <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                            @if (!n.isRead) { <div class="notif-unread-dot"></div> }
+                            @if (n.link) { <i class="bi bi-chevron-right text-muted" style="font-size:.65rem;opacity:.5"></i> }
+                          </div>
                         </div>
                       } @empty {
                         <div class="text-center text-muted py-4 small">
@@ -202,8 +204,8 @@ export class NavbarComponent implements OnInit {
     const t = this.theme.adminTheme();
     if (!t) return 'سمسارة';
     return this.i18n.lang() === 'ar'
-      ? (t.siteNameAr || t.siteName || 'سمسارة')
-      : (t.siteName || 'Samsary');
+      ? (t.siteNameAr || t.siteName || 'سمسارلي')
+      : (t.siteName || 'Samsarly');
   }
   unread = (() => {
     const s: { v: number } = { v: 0 };
@@ -249,7 +251,7 @@ export class NavbarComponent implements OnInit {
       });
     }
     this.notifOpen.set(false);
-    if (n.link) this.router.navigateByUrl(n.link);
+    this.router.navigateByUrl(n.link || '/notifications');
   }
 
   markAllNotif() {

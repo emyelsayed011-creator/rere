@@ -24,8 +24,10 @@ public class EmailSettings
     public bool UseSsl { get; set; } = true;
     public string User { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
-    public string FromAddress { get; set; } = "no-reply@samsary.local";
-    public string FromName { get; set; } = "Samsary";
+    public string FromAddress { get; set; } = "no-reply@samsarly.com";
+    public string FromName { get; set; } = "Samsarly";
+    /// <summary>Public URL of the web app — used to build email deep-links.</summary>
+    public string AppBaseUrl { get; set; } = "https://samsarly.com";
 }
 
 public class SmsSettings

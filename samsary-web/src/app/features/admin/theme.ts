@@ -24,7 +24,7 @@ import { ApiService } from '../../core/api.service';
                   <i class="bi bi-buildings-fill fs-3"></i>
                 }
                 <div>
-                  <div class="fw-bold">{{ form.value.siteName || 'Samsary' }}</div>
+                  <div class="fw-bold">{{ form.value.siteName || 'Samsarly' }}</div>
                   @if (form.value.siteNameAr) {
                     <div class="small opacity-75" dir="rtl">{{ form.value.siteNameAr }}</div>
                   }
@@ -60,11 +60,11 @@ import { ApiService } from '../../core/api.service';
               <div class="row g-3 mb-3">
                 <div class="col-md-6">
                   <label class="form-label fw-medium">{{ 'admin.themeSiteName' | t }} (EN)</label>
-                  <input class="form-control" formControlName="siteName" placeholder="Samsary">
+                  <input class="form-control" formControlName="siteName" placeholder="Samsarly">
                 </div>
                 <div class="col-md-6">
                   <label class="form-label fw-medium">{{ 'admin.themeSiteName' | t }} (AR)</label>
-                  <input class="form-control" formControlName="siteNameAr" placeholder="سمسارة" dir="rtl">
+                  <input class="form-control" formControlName="siteNameAr" placeholder="سمسارلي" dir="rtl">
                 </div>
               </div>
 

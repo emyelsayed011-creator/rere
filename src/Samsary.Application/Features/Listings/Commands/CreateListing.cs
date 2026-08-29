@@ -36,14 +36,17 @@ public sealed class CreateListingCommandHandler : ICommandHandler<CreateListingC
     private readonly ICategoryRepository _categories;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IApplicationDbContext _db;
 
     public CreateListingCommandHandler(
-        IListingRepository listings, ICategoryRepository categories, IUnitOfWork unitOfWork, ICurrentUser currentUser)
+        IListingRepository listings, ICategoryRepository categories, IUnitOfWork unitOfWork,
+        ICurrentUser currentUser, IApplicationDbContext db)
     {
         _listings = listings;
         _categories = categories;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _db = db;
     }
 
     public async Task<Result<ListingDto>> Handle(CreateListingCommand request, CancellationToken cancellationToken)
@@ -51,7 +54,9 @@ public sealed class CreateListingCommandHandler : ICommandHandler<CreateListingC
         if (_currentUser.UserId is not { } ownerId)
             return Error.Unauthorized("User.Unauthenticated", "Not authenticated.");
 
-        if (!_currentUser.IsEmailConfirmed)
+        // Check from DB — JWT claim may be stale if email was just confirmed
+        var user = await _db.Users.FindAsync([ownerId], cancellationToken);
+        if (user is null || !user.EmailConfirmed)
             return Error.Forbidden("User.EmailNotConfirmed", "Please confirm your email before creating a listing.");
 
         if (!await _categories.AnyAsync(new CategoryByIdSpecification(request.CategoryId), cancellationToken))

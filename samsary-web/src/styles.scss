@@ -198,17 +198,18 @@ a {
 
 .badge-type {
   position: absolute;
-  top: 12px;
-  inset-inline-start: 12px;
-  border-radius: .6rem;
-  padding: .35rem .65rem;
-  display: inline-flex;
-  align-items: center;
-  gap: .35rem;
+  top: 10px;
+  inset-inline-start: 10px;
+  width: fit-content !important;   /* override Bootstrap .ratio > * { width: 100% } */
+  height: auto !important;
+  border-radius: 999px;
+  padding: .25rem .65rem;
+  font-size: .72rem;
+  font-weight: 700;
   white-space: nowrap;
-  font-weight: 600;
   backdrop-filter: blur(4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, .15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
+  z-index: 2;
 }
 
 .badge {
@@ -590,6 +591,19 @@ html[dir='rtl'] .dropdown-menu-end {
 
 html[dir='rtl'] .bi-box-arrow-right {
   transform: scaleX(-1);
+}
+
+/* Bootstrap hardcodes margin-left:auto on .btn-close inside modal-header
+   which keeps it on the right even in RTL — flip it to margin-right:auto */
+html[dir='rtl'] .modal-header .btn-close {
+  margin-left: calc(var(--bs-modal-header-padding-x) * -.5);
+  margin-right: auto;
+}
+
+/* Also fix btn-close inside .notif-panel-head */
+html[dir='rtl'] .notif-panel-head .btn-close {
+  margin-left: 0;
+  margin-right: auto;
 }
 
 /* ---------- Utilities ---------- */

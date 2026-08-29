@@ -13,6 +13,7 @@ export class RealtimeService {
   readonly latestMessage = signal<ChatMessage | null>(null);
   readonly latestNotification = signal<NotificationItem | null>(null);
   readonly unreadDelta = signal(0);
+  readonly messageRead = signal<number | null>(null);
   readonly newListing = signal<{ id: number; title: string; category?: string; price: number; currency: string; type: number; location?: string } | null>(null);
 
   async connect() {
@@ -26,7 +27,7 @@ export class RealtimeService {
         .build();
       this.chat.on('receiveMessage', (m: ChatMessage) => this.latestMessage.set(m));
       this.chat.on('messageSent',    (m: ChatMessage) => this.latestMessage.set(m));
-      this.chat.on('messageRead', () => { /* receiver can update */ });
+      this.chat.on('messageRead', (id: number) => this.messageRead.set(id));
       await this.chat.start();
     }
     if (!this.notif) {

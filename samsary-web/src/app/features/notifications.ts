@@ -82,7 +82,6 @@ export class NotificationsComponent implements OnInit {
   load() { this.api.notifications().subscribe(r => this.items.set(r.items)); }
 
   openNotif(n: NotificationItem) {
-    // Auto-mark as read on click
     if (!n.isRead) {
       this.api.markNotification(n.id).subscribe(() =>
         this.items.update(list => list.map(x => x.id === n.id ? { ...x, isRead: true } : x))

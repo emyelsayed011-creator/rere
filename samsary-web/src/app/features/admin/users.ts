@@ -88,7 +88,7 @@ import { TranslatePipe, I18nService } from '../../core/i18n.service';
                 </h5>
                 <p class="text-muted small mb-0">{{ u.email }}</p>
               </div>
-              <button class="btn-close ms-auto" (click)="banTarget.set(null)"></button>
+              <button class="btn-close" (click)="banTarget.set(null)"></button>
             </div>
             <div class="modal-body py-3">
               <div class="mb-3">

@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Samsary.Application.Common.Interfaces;
 using Samsary.Domain.Enums;
+using Samsary.Infrastructure.Configuration;
 
 namespace Samsary.Infrastructure.Services.Notifications;
 
@@ -10,12 +12,16 @@ public sealed class EmailNotificationChannel : INotificationChannel
 {
     private readonly IApplicationDbContext _db;
     private readonly IEmailService _email;
+    private readonly EmailSettings _settings;
     private readonly ILogger<EmailNotificationChannel> _logger;
 
-    public EmailNotificationChannel(IApplicationDbContext db, IEmailService email, ILogger<EmailNotificationChannel> logger)
+    public EmailNotificationChannel(
+        IApplicationDbContext db, IEmailService email,
+        IOptions<EmailSettings> settings, ILogger<EmailNotificationChannel> logger)
     {
         _db = db;
         _email = email;
+        _settings = settings.Value;
         _logger = logger;
     }
 
@@ -28,7 +34,26 @@ public sealed class EmailNotificationChannel : INotificationChannel
 
         try
         {
-            await _email.SendAsync(toEmail, message.Title, message.EmailHtml ?? $"<p>{message.Body}</p>", cancellationToken);
+            string html;
+            if (message.EmailHtml is not null)
+            {
+                // Custom HTML was provided (e.g. from NotificationHandlers) — still wrap in template
+                html = EmailTemplate.Notification(
+                    _settings.FromName, _settings.AppBaseUrl, "#1a4f7a",
+                    message.Title, message.Body,
+                    ctaLabel: "عرض الإشعار", ctaPath: message.Link ?? "/notifications");
+                // Embed the custom body inside the template body slot
+                html = html.Replace(message.Body, message.EmailHtml);
+            }
+            else
+            {
+                html = EmailTemplate.Notification(
+                    _settings.FromName, _settings.AppBaseUrl, "#1a4f7a",
+                    message.Title, message.Body,
+                    ctaLabel: "عرض الإشعار", ctaPath: message.Link ?? "/notifications");
+            }
+
+            await _email.SendAsync(toEmail, $"{_settings.FromName} — {message.Title}", html, cancellationToken);
         }
         catch (Exception ex)
         {

@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Samsary.Application.Common.Interfaces;
 using Samsary.Application.DTOs;
 using Samsary.Domain.Entities;
 using Samsary.Domain.Enums;
+using Samsary.Infrastructure.Configuration;
 using Samsary.Infrastructure.Hubs;
 
 namespace Samsary.Infrastructure.Services;
@@ -15,6 +17,7 @@ public class NotificationService : INotificationService
     private readonly IHubContext<NotificationHub> _hub;
     private readonly IEmailService _email;
     private readonly ISmsService _sms;
+    private readonly EmailSettings _emailSettings;
     private readonly ILogger<NotificationService> _logger;
 
     public NotificationService(
@@ -22,12 +25,14 @@ public class NotificationService : INotificationService
         IHubContext<NotificationHub> hub,
         IEmailService email,
         ISmsService sms,
+        IOptions<EmailSettings> emailSettings,
         ILogger<NotificationService> logger)
     {
         _db = db;
         _hub = hub;
         _email = email;
         _sms = sms;
+        _emailSettings = emailSettings.Value;
         _logger = logger;
     }
 
@@ -59,7 +64,17 @@ public class NotificationService : INotificationService
             var user = await _db.Users.FindAsync(new object?[] { userId }, ct);
             if (user?.Email is { } toEmail)
             {
-                try { await _email.SendAsync(toEmail, title, emailHtml ?? $"<p>{message}</p>", ct); }
+                try
+                {
+                    // Wrap in branded template; custom emailHtml becomes the body content
+                    var html = EmailTemplate.Notification(
+                        _emailSettings.FromName, _emailSettings.AppBaseUrl, "#1a4f7a",
+                        title,
+                        emailHtml ?? $"<p>{message}</p>",
+                        ctaLabel: "عرض الإشعار",
+                        ctaPath: link ?? "/notifications");
+                    await _email.SendAsync(toEmail, $"{_emailSettings.FromName} — {title}", html, ct);
+                }
                 catch (Exception ex) { _logger.LogWarning(ex, "Email notify failed"); }
             }
         }

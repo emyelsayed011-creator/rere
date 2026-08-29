@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
+import { AuthService } from '../../core/auth.service';
 import { TranslatePipe } from '../../core/i18n.service';
 
 @Component({
@@ -30,6 +31,7 @@ import { TranslatePipe } from '../../core/i18n.service';
 })
 export class ConfirmEmailComponent implements OnInit {
   private api = inject(ApiService);
+  private auth = inject(AuthService);
   private route = inject(ActivatedRoute);
   loading = signal(true);
   success = signal(false);
@@ -40,7 +42,13 @@ export class ConfirmEmailComponent implements OnInit {
     const token  = this.route.snapshot.queryParamMap.get('token')  ?? '';
     if (!userId || !token) { this.loading.set(false); this.error.set('Invalid confirmation link.'); return; }
     this.api.confirmEmail(userId, token).subscribe({
-      next: () => { this.success.set(true); this.loading.set(false); },
+      next: () => {
+        this.success.set(true);
+        this.loading.set(false);
+        // Update the in-memory user so the "please confirm" banner disappears immediately
+        const u = this.auth.user();
+        if (u) this.auth.updateLocalUser({ ...u, emailConfirmed: true });
+      },
       error: e => { this.error.set(e?.error?.detail || 'Confirmation failed.'); this.loading.set(false); }
     });
   }

@@ -9,6 +9,7 @@ using Samsary.Domain.Entities;
 using Samsary.Domain.Repositories;
 using Samsary.Infrastructure.Configuration;
 using Samsary.Infrastructure.Persistence;
+using Samsary.Infrastructure.Services;
 using System.Text;
 
 namespace Samsary.Infrastructure.Identity;
@@ -23,6 +24,7 @@ public sealed class IdentityService : IIdentityService
     private readonly IUnitOfWork _uow;
     private readonly IEmailService _email;
     private readonly JwtSettings _jwtSettings;
+    private readonly EmailSettings _emailSettings;
     private readonly ILogger<IdentityService> _logger;
 
     public IdentityService(
@@ -33,6 +35,7 @@ public sealed class IdentityService : IIdentityService
         IUnitOfWork uow,
         IEmailService email,
         IOptions<JwtSettings> jwtSettings,
+        IOptions<EmailSettings> emailSettings,
         ILogger<IdentityService> logger)
     {
         _userManager = userManager;
@@ -42,6 +45,7 @@ public sealed class IdentityService : IIdentityService
         _uow = uow;
         _email = email;
         _jwtSettings = jwtSettings.Value;
+        _emailSettings = emailSettings.Value;
         _logger = logger;
     }
 
@@ -211,11 +215,15 @@ public sealed class IdentityService : IIdentityService
 
         var rawToken = await _userManager.GeneratePasswordResetTokenAsync(user);
         var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(rawToken));
-        var link = $"https://samsary.local/reset-password?email={Uri.EscapeDataString(email)}&token={encodedToken}";
+        var link = $"{_emailSettings.AppBaseUrl.TrimEnd('/')}/reset-password?email={Uri.EscapeDataString(email)}&token={encodedToken}";
         try
         {
-            await _email.SendAsync(email, "Reset your Samsary password",
-                $"<p>Click the link below to reset your password:</p><p><a href='{link}'>{link}</a></p><p>If you didn't request this, ignore this email.</p>",
+            await _email.SendAsync(email, $"{_emailSettings.FromName} — إعادة تعيين كلمة المرور",
+                EmailTemplate.Notification(
+                    _emailSettings.FromName, _emailSettings.AppBaseUrl, "#1a4f7a",
+                    "إعادة تعيين كلمة المرور",
+                    "طلبت إعادة تعيين كلمة المرور لحسابك على سمسارلي. إذا لم تطلب ذلك تجاهل هذا الإيميل.",
+                    ctaLabel: "تعيين كلمة المرور", ctaPath: link),
                 cancellationToken);
         }
         catch (Exception ex) { _logger.LogWarning(ex, "Failed to send password reset email to {Email}", email); }
@@ -274,7 +282,7 @@ public sealed class IdentityService : IIdentityService
 
         return new AuthResponseDto(accessToken, expiresAt,
             new UserDto(user.Id, user.Email ?? "", user.DisplayName, user.AvatarUrl, user.Bio, roles,
-                EmailConfirmed: user.EmailConfirmed),
+                user.DateOfBirth, user.Gender, user.Country, user.PhoneNumber, user.EmailConfirmed),
             rawRefreshToken);
     }
 
@@ -284,11 +292,15 @@ public sealed class IdentityService : IIdentityService
         {
             var rawToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
             var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(rawToken));
-            var link = $"https://samsary.local/confirm-email?userId={user.Id}&token={encodedToken}";
+            var link = $"{_emailSettings.AppBaseUrl.TrimEnd('/')}/confirm-email?userId={user.Id}&token={encodedToken}";
             await _email.SendAsync(
                 user.Email!,
-                "Confirm your Samsary account",
-                $"<p>Welcome to Samsary! <a href='{link}'>Click here to confirm your email.</a></p>",
+                $"{_emailSettings.FromName} — تأكيد حسابك",
+                EmailTemplate.Notification(
+                    _emailSettings.FromName, _emailSettings.AppBaseUrl, "#1a4f7a",
+                    $"مرحباً بك في {_emailSettings.FromName}!",
+                    "شكراً لتسجيلك في منصتنا. اضغط على الزر أدناه لتأكيد بريدك الإلكتروني وبدء نشر إعلاناتك.",
+                    ctaLabel: "تأكيد البريد الإلكتروني", ctaPath: link),
                 CancellationToken.None);
         }
         catch (Exception ex)

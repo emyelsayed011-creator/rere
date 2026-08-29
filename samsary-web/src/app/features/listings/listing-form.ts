@@ -98,7 +98,7 @@ const WIZARD_STEPS = [
                 </div>
               }
               <div [class]="editing() ? 'col-md-6' : 'col-12'">
-                <label class="form-label fw-medium">{{ 'form.category' | t }}</label>
+                <label class="form-label fw-medium">{{ 'form.category' | t }} <span class="text-danger">*</span></label>
                 <select class="form-select" formControlName="categoryId">
                   @for (c of categories(); track c.id) {
                     <option [ngValue]="c.id">{{ i18n.lang() === 'ar' ? (c.nameAr || c.name) : c.name }}</option>
@@ -122,16 +122,20 @@ const WIZARD_STEPS = [
                     <option [ngValue]="1">
                       {{ i18n.lang() === 'ar' ? 'متاح' : 'Available' }}
                     </option>
-                    <option [ngValue]="3">
-                      {{ i18n.lang() === 'ar' ? 'تم البيع' : 'Sold' }}
-                    </option>
-                    <option [ngValue]="4">
-                      {{ i18n.lang() === 'ar' ? 'تم التأجير' : 'Rented' }}
-                    </option>
+                    @if (form.controls.type.value === 1) {
+                      <option [ngValue]="3">
+                        {{ i18n.lang() === 'ar' ? 'تم البيع' : 'Sold' }}
+                      </option>
+                    }
+                    @if (form.controls.type.value === 2) {
+                      <option [ngValue]="4">
+                        {{ i18n.lang() === 'ar' ? 'تم التأجير' : 'Rented' }}
+                      </option>
+                    }
                   </select>
                   <div class="form-text">
                     <i class="bi bi-info-circle me-1"></i>
-                    {{ i18n.lang() === 'ar' ? 'حدد إذا كان الإعلان لا يزال متاحاً أو تم البيع/التأجير' : 'Mark if sold/rented to hide from search results' }}
+                    {{ i18n.lang() === 'ar' ? 'اختر "متاح" ليظهر الإعلان في البحث' : 'Set to Available to show in search results' }}
                   </div>
                 </div>
               }
@@ -142,12 +146,12 @@ const WIZARD_STEPS = [
           @if (step() === 2 || editing()) {
             <div class="row g-3" [class.mt-2]="editing()">
               <div class="col-12">
-                <label class="form-label fw-medium">{{ 'form.title' | t }}</label>
+                <label class="form-label fw-medium">{{ 'form.title' | t }} <span class="text-danger">*</span></label>
                 <input class="form-control" formControlName="title" maxlength="200">
                 @if (fieldError('title')) { <div class="invalid-feedback d-block">{{ fieldError('title') }}</div> }
               </div>
               <div class="col-md-5">
-                <label class="form-label fw-medium">{{ 'form.price' | t }}</label>
+                <label class="form-label fw-medium">{{ 'form.price' | t }} <span class="text-danger">*</span></label>
                 <input class="form-control" type="number" formControlName="price" min="1">
                 @if (form.controls.price.invalid && form.controls.price.touched) {
                   <div class="invalid-feedback d-block">
@@ -172,14 +176,14 @@ const WIZARD_STEPS = [
                 </div>
               </div>
               <div class="col-12">
-                <label class="form-label fw-medium">{{ 'form.description' | t }}</label>
+                <label class="form-label fw-medium">{{ 'form.description' | t }} <span class="text-danger">*</span></label>
                 <textarea class="form-control" formControlName="description" rows="5" maxlength="4000"></textarea>
                 @if (fieldError('description')) { <div class="invalid-feedback d-block">{{ fieldError('description') }}</div> }
               </div>
               <div class="col-md-6">
                 <label class="form-label fw-medium">
                   <i class="bi bi-telephone-fill me-1 text-primary" style="font-size:.85rem"></i>
-                  {{ 'form.contactPhone' | t }}
+                  {{ 'form.contactPhone' | t }} <span class="text-danger">*</span>
                 </label>
                 <input class="form-control" type="tel" formControlName="contactPhone"
                        placeholder="01xxxxxxxxx" dir="ltr">
@@ -654,9 +658,17 @@ export class ListingFormComponent implements OnInit, OnDestroy {
       this.categories.set(c);
       if (c.length && !this.form.value.categoryId) this.form.patchValue({ categoryId: c[0].id });
     });
-    // Pre-fill phone from logged-in user
-    const userPhone = this.auth.user()?.phone;
-    if (userPhone) this.form.patchValue({ contactPhone: userPhone });
+
+    // Pre-fill phone — use cached value first, then fetch fresh from API if missing
+    const cachedPhone = this.auth.user()?.phone;
+    if (cachedPhone) {
+      this.form.patchValue({ contactPhone: cachedPhone });
+    } else {
+      this.api.me().subscribe(u => {
+        this.auth.updateLocalUser(u);
+        if (u.phone) this.form.patchValue({ contactPhone: u.phone });
+      });
+    }
 
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
@@ -830,7 +842,12 @@ export class ListingFormComponent implements OnInit, OnDestroy {
         next: l => {
           this.created.set(l);
           this.saving.set(false);
-          if (!this.editing()) window.scrollTo({ top: 0, behavior: 'smooth' });
+          if (this.editing()) {
+            // In edit mode, navigate back immediately after save
+            this.router.navigateByUrl('/my-listings');
+          } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
         },
         error: e => {
           const apiErrors = e?.error?.errors;
