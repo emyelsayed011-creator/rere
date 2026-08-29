@@ -14,9 +14,17 @@ public sealed class SearchListingsSpecification : Specification<Listing>
 {
     public SearchListingsSpecification(
         string? query, int? categoryId, ListingType? type, int page, int pageSize,
-        bool forCounting = false, int? afterId = null, string? ownerId = null, string? location = null)
+        bool forCounting = false, int? afterId = null, string? ownerId = null,
+        string? location = null, decimal? priceMin = null, decimal? priceMax = null,
+        bool? isNegotiable = null, bool includeSold = false)
     {
-        Where(l => l.Status == ListingStatus.Approved);
+        // Default: only Approved; opt-in to include Sold/Rented
+        if (includeSold)
+            Where(l => l.Status == ListingStatus.Approved
+                    || l.Status == ListingStatus.Sold
+                    || l.Status == ListingStatus.Rented);
+        else
+            Where(l => l.Status == ListingStatus.Approved);
 
         if (!string.IsNullOrWhiteSpace(query))
         {
@@ -24,12 +32,14 @@ public sealed class SearchListingsSpecification : Specification<Listing>
             Where(l => l.SearchVector!.Matches(EF.Functions.WebSearchToTsQuery("english", term)));
         }
 
-        if (categoryId.HasValue) Where(l => l.CategoryId == categoryId);
-        if (type.HasValue)       Where(l => l.Type == type);
+        if (categoryId.HasValue)  Where(l => l.CategoryId == categoryId);
+        if (type.HasValue)        Where(l => l.Type == type);
+        if (priceMin.HasValue)    Where(l => l.Price >= priceMin.Value);
+        if (priceMax.HasValue)    Where(l => l.Price <= priceMax.Value);
+        if (isNegotiable == true) Where(l => l.IsNegotiable);
         if (!string.IsNullOrWhiteSpace(ownerId))  Where(l => l.OwnerId == ownerId);
         if (!string.IsNullOrWhiteSpace(location))
         {
-            // Split into words so "nasr cairo" matches "Nasr City, Cairo Governorate"
             var words = location.Trim().ToLower().Split(' ', StringSplitOptions.RemoveEmptyEntries);
             foreach (var word in words)
             {

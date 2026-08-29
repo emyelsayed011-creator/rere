@@ -10,7 +10,9 @@ namespace Samsary.Application.Features.Listings.Queries;
 
 public sealed record SearchListingsQuery(
     string? Query, int? CategoryId, ListingType? Type, int Page, int PageSize,
-    int? Cursor = null, string? OwnerId = null, string? Location = null)
+    int? Cursor = null, string? OwnerId = null, string? Location = null,
+    decimal? PriceMin = null, decimal? PriceMax = null,
+    bool? IsNegotiable = null, bool IncludeSold = false)
     : IQuery<Result<PagedResult<ListingDto>>>;
 
 public sealed class SearchListingsQueryHandler : IQueryHandler<SearchListingsQuery, PagedResult<ListingDto>>
@@ -26,7 +28,9 @@ public sealed class SearchListingsQueryHandler : IQueryHandler<SearchListingsQue
 
         var items = await _listings.ListAsync(
             new SearchListingsSpecification(request.Query, request.CategoryId, request.Type, page, pageSize,
-                afterId: request.Cursor, ownerId: request.OwnerId, location: request.Location),
+                afterId: request.Cursor, ownerId: request.OwnerId, location: request.Location,
+                priceMin: request.PriceMin, priceMax: request.PriceMax,
+                isNegotiable: request.IsNegotiable, includeSold: request.IncludeSold),
             cancellationToken);
 
         int total = 0;
@@ -34,7 +38,9 @@ public sealed class SearchListingsQueryHandler : IQueryHandler<SearchListingsQue
         {
             total = await _listings.CountAsync(
                 new SearchListingsSpecification(request.Query, request.CategoryId, request.Type, page, pageSize,
-                    forCounting: true, ownerId: request.OwnerId, location: request.Location),
+                    forCounting: true, ownerId: request.OwnerId, location: request.Location,
+                    priceMin: request.PriceMin, priceMax: request.PriceMax,
+                    isNegotiable: request.IsNegotiable, includeSold: request.IncludeSold),
                 cancellationToken);
         }
 

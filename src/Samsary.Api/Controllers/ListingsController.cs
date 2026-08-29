@@ -23,11 +23,18 @@ public class ListingsController : ApiControllerBase
         [FromQuery] ListingType? type,
         [FromQuery] string? ownerId,
         [FromQuery] string? location,
+        [FromQuery] decimal? priceMin,
+        [FromQuery] decimal? priceMax,
+        [FromQuery] bool? isNegotiable,
+        [FromQuery] bool includeSold = false,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 12,
         CancellationToken ct = default)
         => HandleResult(await _sender.Send(
-            new SearchListingsQuery(q, categoryId, type, page, pageSize, OwnerId: ownerId, Location: location), ct));
+            new SearchListingsQuery(q, categoryId, type, page, pageSize,
+                OwnerId: ownerId, Location: location,
+                PriceMin: priceMin, PriceMax: priceMax,
+                IsNegotiable: isNegotiable, IncludeSold: includeSold), ct));
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> Get(int id, CancellationToken ct)

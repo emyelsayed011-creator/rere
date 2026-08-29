@@ -72,7 +72,82 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
                 <i class="bi bi-geo-alt-fill"></i>
               }
             </button>
+            <button class="btn btn-outline-secondary" (click)="showAdvanced=!showAdvanced"
+                    [class.active]="showAdvanced || priceMin || priceMax || isNegotiable || includeSold"
+                    [title]="i18n.lang() === 'ar' ? 'فلاتر متقدمة' : 'More filters'">
+              <i class="bi bi-sliders"></i>
+            </button>
           </div>
+
+          <!-- ── Advanced filters (collapsible) ── -->
+          @if (showAdvanced) {
+            <div class="col-12 border-top pt-2 mt-1 row g-2">
+              <!-- Price range -->
+              <div class="col-sm-3">
+                <label class="form-label small fw-medium mb-1">
+                  {{ i18n.lang() === 'ar' ? 'السعر من' : 'Min price' }}
+                </label>
+                <input class="form-control form-control-sm" type="number" min="0"
+                       [(ngModel)]="priceMin" (keydown.enter)="reload()"
+                       [placeholder]="i18n.lang() === 'ar' ? 'أدنى سعر' : 'Min'">
+              </div>
+              <div class="col-sm-3">
+                <label class="form-label small fw-medium mb-1">
+                  {{ i18n.lang() === 'ar' ? 'السعر إلى' : 'Max price' }}
+                </label>
+                <input class="form-control form-control-sm" type="number" min="0"
+                       [(ngModel)]="priceMax" (keydown.enter)="reload()"
+                       [placeholder]="i18n.lang() === 'ar' ? 'أعلى سعر' : 'Max'">
+              </div>
+              <!-- Status -->
+              <div class="col-sm-3">
+                <label class="form-label small fw-medium mb-1">
+                  {{ i18n.lang() === 'ar' ? 'حالة الإعلان' : 'Status' }}
+                </label>
+                <select class="form-select form-select-sm" [(ngModel)]="includeSold" (change)="reload()">
+                  <option [ngValue]="false">{{ i18n.lang() === 'ar' ? 'متاح فقط' : 'Available only' }}</option>
+                  <option [ngValue]="true">{{ i18n.lang() === 'ar' ? 'كل الإعلانات (بما فيها المباعة)' : 'All (incl. sold/rented)' }}</option>
+                </select>
+              </div>
+              <!-- Negotiable -->
+              <div class="col-sm-3 d-flex align-items-end pb-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="filterNegotiable"
+                         [(ngModel)]="isNegotiable" (change)="reload()">
+                  <label class="form-check-label small fw-medium" for="filterNegotiable">
+                    <i class="bi bi-chat-left-dots me-1 text-primary"></i>
+                    {{ i18n.lang() === 'ar' ? 'قابل للتفاوض فقط' : 'Negotiable only' }}
+                  </label>
+                </div>
+              </div>
+              <!-- Active filters summary -->
+              @if (priceMin || priceMax || isNegotiable || includeSold) {
+                <div class="col-12 d-flex gap-2 flex-wrap align-items-center">
+                  @if (priceMin || priceMax) {
+                    <span class="badge bg-primary-subtle text-primary rounded-pill">
+                      <i class="bi bi-currency-exchange me-1"></i>
+                      {{ priceMin || 0 | number }} — {{ priceMax ? (priceMax | number) : '∞' }}
+                    </span>
+                  }
+                  @if (isNegotiable) {
+                    <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill">
+                      <i class="bi bi-chat-left-dots me-1"></i>
+                      {{ i18n.lang() === 'ar' ? 'قابل للتفاوض' : 'Negotiable' }}
+                    </span>
+                  }
+                  @if (includeSold) {
+                    <span class="badge bg-secondary-subtle text-secondary rounded-pill">
+                      <i class="bi bi-archive me-1"></i>
+                      {{ i18n.lang() === 'ar' ? 'يشمل المباعة' : 'Incl. sold' }}
+                    </span>
+                  }
+                  <button class="btn btn-link btn-sm p-0 text-danger" (click)="clearAdvanced()">
+                    {{ i18n.lang() === 'ar' ? 'مسح الفلاتر' : 'Clear' }}
+                  </button>
+                </div>
+              }
+            </div>
+          }
           @if (locationQ) {
             <div class="col-12">
               <span class="badge bg-primary-subtle text-primary rounded-pill py-1 px-3">
@@ -121,7 +196,14 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
             <div class="card-body">
               <h6 class="card-title mb-1 text-truncate">{{ l.title }}</h6>
               <div class="text-muted small text-truncate"><i class="bi bi-tag me-1"></i>{{ categoryName(l.category) }} · {{ l.location || '—' }}</div>
-              <div class="fw-bold text-primary mt-2 fs-5">{{ l.price | number }} {{ l.currency }}</div>
+              <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
+                <span class="fw-bold text-primary fs-5">{{ l.price | number }} {{ l.currency }}</span>
+                @if (l.isNegotiable) {
+                  <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill" style="font-size:.68rem">
+                    <i class="bi bi-chat-left-dots me-1"></i>{{ i18n.lang() === 'ar' ? 'قابل للتفاوض' : 'Negotiable' }}
+                  </span>
+                }
+              </div>
             </div>
           </a>
         </div>
@@ -156,6 +238,11 @@ export class ListingsComponent implements OnInit, OnDestroy {
   categoryId: number | null = null;
   type: ListingType | null = null;
   locationQ = '';
+  priceMin: number | null = null;
+  priceMax: number | null = null;
+  isNegotiable = false;
+  includeSold = false;
+  showAdvanced = false;
   pageSize = 12;
 
   items = signal<Listing[]>([]);
@@ -202,7 +289,11 @@ export class ListingsComponent implements OnInit, OnDestroy {
     this.api.listings({
       q: this.q, categoryId: this.categoryId ?? undefined,
       type: this.type ?? undefined, page: this.page(), pageSize: this.pageSize,
-      location: this.locationQ || undefined
+      location: this.locationQ || undefined,
+      priceMin: this.priceMin ?? undefined,
+      priceMax: this.priceMax ?? undefined,
+      isNegotiable: this.isNegotiable || undefined,
+      includeSold: this.includeSold || undefined
     }).subscribe(r => { this.items.set(r.items); this.total.set(r.total); });
   }
 
@@ -230,6 +321,15 @@ export class ListingsComponent implements OnInit, OnDestroy {
   setPage(p: number) {
     if (p < 1 || p > this.totalPages()) return;
     this.page.set(p);
+    this.reload();
+  }
+
+  clearAdvanced() {
+    this.priceMin = null;
+    this.priceMax = null;
+    this.isNegotiable = false;
+    this.includeSold = false;
+    this.page.set(1);
     this.reload();
   }
 
