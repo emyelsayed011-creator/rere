@@ -49,7 +49,10 @@ public class CloudinaryService : ICloudinaryService
             Folder = "samsary/videos",
             UseFilename = false,
             UniqueFilename = true,
-            Overwrite = false
+            Overwrite = false,
+            // Auto quality + codec optimization for smoother streaming
+            EagerAsync = true,
+            EagerTransforms = [new Transformation().Quality("auto:eco").VideoCodec("auto")]
         };
         var r = await _cloudinary.UploadLargeAsync(p, 20 * 1024 * 1024);
         if (r.Error is not null) throw new InvalidOperationException(r.Error.Message);

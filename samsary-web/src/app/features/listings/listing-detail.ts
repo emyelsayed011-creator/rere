@@ -41,8 +41,13 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
                           @if (m.mediaType === MediaType.Image) {
                             <img [src]="m.url" class="carousel-media-img" [alt]="'Photo ' + (i+1)">
                           } @else {
-                            <video [src]="m.url" controls [poster]="m.thumbnailUrl || ''"
-                                   class="carousel-media-img" preload="metadata"></video>
+                            <!-- Only load src for active slide; preload=auto for smoother playback -->
+                            <video [src]="i === 0 ? videoUrl(m.url) : ''" [attr.data-src]="videoUrl(m.url)"
+                                   controls [poster]="m.thumbnailUrl || ''"
+                                   class="carousel-media-img"
+                                   preload="auto"
+                                   playsinline
+                                   (play)="pauseOtherVideos($event)"></video>
                           }
                         </div>
                       </div>
@@ -413,6 +418,21 @@ export class ListingDetailComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() { this.map?.remove(); }
+
+  pauseOtherVideos(event: Event) {
+    // Pause all other video elements when one starts playing
+    const playing = event.target as HTMLVideoElement;
+    document.querySelectorAll('video').forEach(v => {
+      if (v !== playing && !v.paused) v.pause();
+    });
+  }
+
+  /** Inject Cloudinary quality optimization into video URLs for smoother streaming. */
+  videoUrl(url: string): string {
+    if (!url || !url.includes('cloudinary.com')) return url;
+    // Insert q_auto:eco,vc_auto transformation before the public_id
+    return url.replace('/upload/', '/upload/q_auto:eco,vc_auto/');
+  }
 
   async sendMessage(receiverId: string, listingId: number) {
     if (!this.message.trim()) return;
