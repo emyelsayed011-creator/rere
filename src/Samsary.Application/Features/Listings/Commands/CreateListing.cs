@@ -12,7 +12,8 @@ using Samsary.Domain.Repositories;
 namespace Samsary.Application.Features.Listings.Commands;
 
 public sealed record CreateListingCommand(
-    string Title, string Description, decimal Price, string Currency, ListingType Type, int CategoryId, string? Location)
+    string Title, string Description, decimal Price, string Currency, ListingType Type, int CategoryId, string? Location,
+    bool IsNegotiable = false)
     : ICommand<Result<ListingDto>>;
 
 public sealed class CreateListingCommandValidator : AbstractValidator<CreateListingCommand>
@@ -21,7 +22,7 @@ public sealed class CreateListingCommandValidator : AbstractValidator<CreateList
     {
         RuleFor(x => x.Title).NotEmpty().MaximumLength(200);
         RuleFor(x => x.Description).NotEmpty().MaximumLength(4000);
-        RuleFor(x => x.Price).InclusiveBetween(0, 999_999_999);
+        RuleFor(x => x.Price).GreaterThan(0).LessThanOrEqualTo(999_999_999);
         RuleFor(x => x.Currency).MaximumLength(8);
         RuleFor(x => x.Type).IsInEnum();
         RuleFor(x => x.CategoryId).GreaterThan(0);
@@ -50,6 +51,9 @@ public sealed class CreateListingCommandHandler : ICommandHandler<CreateListingC
         if (_currentUser.UserId is not { } ownerId)
             return Error.Unauthorized("User.Unauthenticated", "Not authenticated.");
 
+        if (!_currentUser.IsEmailConfirmed)
+            return Error.Forbidden("User.EmailNotConfirmed", "Please confirm your email before creating a listing.");
+
         if (!await _categories.AnyAsync(new CategoryByIdSpecification(request.CategoryId), cancellationToken))
             return Error.Validation(new Dictionary<string, string[]> { [nameof(request.CategoryId)] = ["Invalid category."] });
 
@@ -63,6 +67,7 @@ public sealed class CreateListingCommandHandler : ICommandHandler<CreateListingC
             CategoryId = request.CategoryId,
             Location = request.Location,
             OwnerId = ownerId,
+            IsNegotiable = request.IsNegotiable,
             Status = ListingStatus.Pending
         };
 

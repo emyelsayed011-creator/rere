@@ -19,6 +19,8 @@ public class Listing
     [MaxLength(200)] public string? Location { get; set; }
     [MaxLength(2000)] public string? RejectionReason { get; set; }
 
+    public bool IsNegotiable { get; set; }
+
     public int CategoryId { get; set; }
     public Category? Category { get; set; }
 

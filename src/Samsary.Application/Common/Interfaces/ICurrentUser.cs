@@ -12,4 +12,6 @@ public interface ICurrentUser
     bool IsAuthenticated { get; }
 
     bool IsAdmin { get; }
+
+    bool IsEmailConfirmed { get; }
 }

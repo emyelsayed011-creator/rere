@@ -13,7 +13,9 @@ internal static class ListingMapper
         l.CreatedAt,
         l.Media.Select(ToMediaDto).ToList(),
         l.ViewCount,
-        isFavorited);
+        isFavorited,
+        l.IsNegotiable,
+        l.Owner?.PhoneNumber);
 
     public static ListingMediaDto ToMediaDto(ListingMedia m) =>
         new(m.Id, m.Url, m.PublicId, m.MediaType, m.DurationSeconds, m.ThumbnailUrl);

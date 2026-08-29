@@ -23,7 +23,9 @@ public record ListingDto(
     DateTime CreatedAt,
     IList<ListingMediaDto> Media,
     int ViewCount = 0,
-    bool IsFavorited = false);
+    bool IsFavorited = false,
+    bool IsNegotiable = false,
+    string? OwnerPhone = null);
 
 public record CreateListingDto(
     string Title,
@@ -32,7 +34,8 @@ public record CreateListingDto(
     string Currency,
     ListingType Type,
     int CategoryId,
-    string? Location);
+    string? Location,
+    bool IsNegotiable = false);
 
 public record UpdateListingDto(
     string Title,
@@ -41,7 +44,9 @@ public record UpdateListingDto(
     string Currency,
     ListingType Type,
     int CategoryId,
-    string? Location);
+    string? Location,
+    bool IsNegotiable = false,
+    ListingStatus? Status = null);
 
 public record RejectListingDto(string Reason);
 

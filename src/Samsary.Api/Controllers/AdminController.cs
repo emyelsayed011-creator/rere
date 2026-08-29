@@ -94,4 +94,10 @@ public class AdminController : ApiControllerBase
         var user = result.Value!.User;
         return Ok(new { id = user.Id, email = user.Email, displayName = user.DisplayName });
     }
+
+    [HttpPost("broadcast")]
+    public async Task<IActionResult> Broadcast([FromBody] BroadcastDto dto, CancellationToken ct)
+        => HandleResult(await _sender.Send(new BroadcastNotificationCommand(dto.Title, dto.Message, dto.SendEmail), ct));
 }
+
+public record BroadcastDto(string Title, string Message, bool SendEmail = false);

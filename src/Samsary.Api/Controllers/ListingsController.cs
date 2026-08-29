@@ -21,10 +21,13 @@ public class ListingsController : ApiControllerBase
         [FromQuery] string? q,
         [FromQuery] int? categoryId,
         [FromQuery] ListingType? type,
+        [FromQuery] string? ownerId,
+        [FromQuery] string? location,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 12,
         CancellationToken ct = default)
-        => HandleResult(await _sender.Send(new SearchListingsQuery(q, categoryId, type, page, pageSize), ct));
+        => HandleResult(await _sender.Send(
+            new SearchListingsQuery(q, categoryId, type, page, pageSize, OwnerId: ownerId, Location: location), ct));
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> Get(int id, CancellationToken ct)
@@ -40,14 +43,16 @@ public class ListingsController : ApiControllerBase
     public async Task<IActionResult> Create(CreateListingDto dto, CancellationToken ct)
         => HandleResult(
             await _sender.Send(new CreateListingCommand(
-                dto.Title, dto.Description, dto.Price, dto.Currency, dto.Type, dto.CategoryId, dto.Location), ct),
+                dto.Title, dto.Description, dto.Price, dto.Currency, dto.Type, dto.CategoryId, dto.Location,
+                dto.IsNegotiable), ct),
             created => CreatedAtAction(nameof(Get), new { id = created.Id }, created));
 
     [Authorize]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, UpdateListingDto dto, CancellationToken ct)
         => HandleResult(await _sender.Send(new UpdateListingCommand(
-            id, dto.Title, dto.Description, dto.Price, dto.Currency, dto.Type, dto.CategoryId, dto.Location), ct));
+            id, dto.Title, dto.Description, dto.Price, dto.Currency, dto.Type, dto.CategoryId, dto.Location,
+            dto.IsNegotiable, dto.Status), ct));
 
     [Authorize]
     [HttpDelete("{id:int}")]

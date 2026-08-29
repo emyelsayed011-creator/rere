@@ -273,7 +273,8 @@ public sealed class IdentityService : IIdentityService
         await _uow.SaveChangesAsync(ct);
 
         return new AuthResponseDto(accessToken, expiresAt,
-            new UserDto(user.Id, user.Email ?? "", user.DisplayName, user.AvatarUrl, user.Bio, roles),
+            new UserDto(user.Id, user.Email ?? "", user.DisplayName, user.AvatarUrl, user.Bio, roles,
+                EmailConfirmed: user.EmailConfirmed),
             rawRefreshToken);
     }
 
@@ -300,7 +301,7 @@ public sealed class IdentityService : IIdentityService
     {
         var roles = await _userManager.GetRolesAsync(user);
         return new UserDto(user.Id, user.Email ?? "", user.DisplayName, user.AvatarUrl, user.Bio, roles,
-            user.DateOfBirth, user.Gender, user.Country, user.PhoneNumber);
+            user.DateOfBirth, user.Gender, user.Country, user.PhoneNumber, user.EmailConfirmed);
     }
 
     private static Error IdentityErrors(string key, IdentityResult result) =>

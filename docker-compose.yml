@@ -91,12 +91,16 @@ services:
       Cloudinary__ApiKey: "${CLOUDINARY_API_KEY}"
       Cloudinary__ApiSecret: "${CLOUDINARY_API_SECRET}"
       Email__SmtpHost: "${EMAIL_SMTP_HOST}"
+      Email__SmtpPort: "${EMAIL_SMTP_PORT:-587}"
       Email__User: "${EMAIL_USER}"
       Email__Password: "${EMAIL_PASSWORD}"
+      Email__FromAddress: "${EMAIL_FROM_ADDRESS:-no-reply@samsary.local}"
+      Email__FromName: "${EMAIL_FROM_NAME:-Samsary}"
       Redis__ConnectionString: "redis:6379"
       Sms__AccountSid: "${SMS_ACCOUNT_SID}"
       Sms__AuthToken: "${SMS_AUTH_TOKEN}"
       Sms__FromNumber: "${SMS_FROM_NUMBER}"
+      Seq__ApiKey: "${SEQ_API_KEY}"
     ports:
       - "5013:8080"            # call the API directly at http://localhost:5013 (optional)
     volumes:
@@ -117,5 +121,6 @@ services:
 volumes:
   db-data:
   seq-data:
+  redis-data:
   api-logs:
   redis-data:

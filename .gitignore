@@ -24,5 +24,6 @@ Thumbs.db
 .DS_Store
 
 # Secrets
+.env
 *.env
 appsettings.Local.json

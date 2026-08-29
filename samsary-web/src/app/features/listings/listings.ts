@@ -1,7 +1,8 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DecimalPipe } from '@angular/common';
+import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { Category, Listing, ListingStatus, ListingType } from '../../core/models';
@@ -50,11 +51,12 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
           <div class="col-md-2">
             <div class="input-group">
               <span class="input-group-text bg-light px-2"><i class="bi bi-geo-alt text-muted"></i></span>
-              <input class="form-control" [(ngModel)]="locationQ"
+              <input class="form-control" [value]="locationQ"
                      [placeholder]="i18n.lang() === 'ar' ? 'المدينة / المنطقة' : 'City / Area'"
+                     (input)="onLocationInput($any($event.target).value)"
                      (keydown.enter)="reload()">
               @if (locationQ) {
-                <button class="btn btn-outline-secondary px-2" type="button" (click)="locationQ=''; reload()">
+                <button class="btn btn-outline-secondary px-2" type="button" (click)="locationQ=''; page.set(1); reload()">
                   <i class="bi bi-x"></i>
                 </button>
               }
@@ -143,7 +145,7 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
     }
   `
 })
-export class ListingsComponent implements OnInit {
+export class ListingsComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   readonly i18n = inject(I18nService);
@@ -163,6 +165,9 @@ export class ListingsComponent implements OnInit {
   mineMode = signal(false);
   geoLoading = signal(false);
 
+  private destroy$ = new Subject<void>();
+  private locationInput$ = new Subject<string>();
+
   totalPages = () => Math.max(1, Math.ceil(this.total() / this.pageSize));
 
   ngOnInit() {
@@ -176,7 +181,21 @@ export class ListingsComponent implements OnInit {
       const q = qp.get('q'); if (q) this.q = q;
       const loc = qp.get('location'); if (loc) this.locationQ = loc;
       this.reload();
+
+      // Debounce location input — fires 400 ms after user stops typing
+      this.locationInput$.pipe(
+        debounceTime(400),
+        distinctUntilChanged(),
+        takeUntil(this.destroy$)
+      ).subscribe(() => { this.page.set(1); this.reload(); });
     }
+  }
+
+  ngOnDestroy() { this.destroy$.next(); this.destroy$.complete(); }
+
+  onLocationInput(value: string) {
+    this.locationQ = value;
+    this.locationInput$.next(value);
   }
 
   reload() {

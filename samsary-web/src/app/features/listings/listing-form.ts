@@ -9,6 +9,13 @@ import { ConfirmService } from '../../core/confirm.service';
 import { I18nService, TranslatePipe } from '../../core/i18n.service';
 import { Category, Listing, ListingStatus, ListingType } from '../../core/models';
 
+interface UploadItem {
+  file: File;
+  previewUrl: string;
+  state: 'uploading' | 'done' | 'error';
+  error?: string;
+}
+
 const CURRENCIES = [
   { code: 'EGP', label: 'EGP' },
   { code: 'USD', label: 'USD' },
@@ -289,35 +296,33 @@ const WIZARD_STEPS = [
                   {{ i18n.lang() === 'ar' ? 'اسحب الصور هنا أو اضغط للاختيار' : 'Drag images here or click' }}
                 </div>
                 <div class="text-muted" style="font-size:.75rem">JPG, PNG, WEBP</div>
-                <input #imgInput type="file" accept="image/*" multiple hidden (change)="onFileSelected($event)">
+                <input #imgInput type="file" accept="image/*" multiple hidden (change)="onFileSelected($event, listing.id)">
               </div>
-              @if (pendingFiles().length > 0) {
+
+              <!-- Per-file upload progress -->
+              @if (uploadItems().length > 0) {
                 <div class="row g-2 mt-2">
-                  @for (f of pendingFiles(); track f.name; let i = $index) {
+                  @for (item of uploadItems(); track item.previewUrl) {
                     <div class="col-6 col-sm-4">
-                      <div class="media-thumb">
-                        <img [src]="previewUrl(f)" class="media-thumb__img" alt="">
-                        <button class="media-thumb__del" (click)="removePending(i)" type="button"><i class="bi bi-x-lg"></i></button>
-                        <div class="media-thumb__name">{{ f.name }}</div>
+                      <div class="media-thumb upload-item" [class.upload-done]="item.state==='done'" [class.upload-err]="item.state==='error'">
+                        <img [src]="item.previewUrl" class="media-thumb__img" alt="">
+                        @if (item.state === 'uploading') {
+                          <div class="upload-overlay">
+                            <span class="spinner-border spinner-border-sm text-white"></span>
+                          </div>
+                        } @else if (item.state === 'done') {
+                          <div class="upload-overlay upload-overlay--done">
+                            <i class="bi bi-check-circle-fill text-white fs-4"></i>
+                          </div>
+                        } @else {
+                          <div class="upload-overlay upload-overlay--err">
+                            <i class="bi bi-x-circle-fill text-white fs-4"></i>
+                          </div>
+                        }
+                        <div class="media-thumb__name">{{ item.file.name }}</div>
                       </div>
                     </div>
                   }
-                </div>
-                <div class="d-flex gap-2 mt-2">
-                  <button type="button" class="btn btn-samsary btn-sm"
-                          (click)="uploadPending(listing.id)" [disabled]="uploadingImgs()">
-                    @if (uploadingImgs()) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                    @else { <i class="bi bi-cloud-upload me-1"></i> }
-                    {{ i18n.lang() === 'ar' ? 'رفع' : 'Upload' }} ({{ pendingFiles().length }})
-                  </button>
-                  <button type="button" class="btn btn-light btn-sm" (click)="clearPending()" [disabled]="uploadingImgs()">
-                    {{ 'common.cancel' | t }}
-                  </button>
-                </div>
-              }
-              @if (uploadingImgs()) {
-                <div class="progress mt-2" style="height:3px">
-                  <div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div>
                 </div>
               }
             </div>
@@ -327,46 +332,26 @@ const WIZARD_STEPS = [
               <label class="form-label fw-semibold">
                 <i class="bi bi-camera-video me-1 text-primary"></i>{{ 'form.addVideo' | t }}
               </label>
-              @if (!pendingVid()) {
-                <div class="dropzone" [class.dropzone--over]="draggingVid()"
-                     (dragover)="$event.preventDefault(); draggingVid.set(true)"
-                     (dragleave)="draggingVid.set(false)"
-                     (drop)="onDropVid($event)"
-                     (click)="vidInput.click()" role="button" tabindex="0"
-                     (keydown.enter)="vidInput.click()">
+              <div class="dropzone" [class.dropzone--over]="draggingVid()"
+                   (dragover)="$event.preventDefault(); draggingVid.set(true)"
+                   (dragleave)="draggingVid.set(false)"
+                   (drop)="onDropVid($event, listing.id)"
+                   (click)="vidInput.click()" role="button" tabindex="0"
+                   (keydown.enter)="vidInput.click()">
+                @if (uploadingVid()) {
+                  <span class="spinner-border text-primary mb-1"></span>
+                  <div class="fw-semibold small text-primary">
+                    {{ i18n.lang() === 'ar' ? 'جاري الرفع…' : 'Uploading…' }}
+                  </div>
+                } @else {
                   <i class="bi bi-play-circle fs-2 text-primary mb-1"></i>
                   <div class="fw-semibold small">
                     {{ i18n.lang() === 'ar' ? 'اسحب الفيديو هنا أو اضغط' : 'Drag video here or click' }}
                   </div>
                   <div class="text-muted" style="font-size:.75rem">MP4, MOV — {{ 'form.videoHint' | t }}</div>
-                  <input #vidInput type="file" accept="video/*" hidden (change)="onVidSelected($event)">
-                </div>
-              } @else {
-                <div class="media-thumb" style="aspect-ratio:16/9">
-                  <video [src]="pendingVidUrl()" class="media-thumb__img" preload="metadata"></video>
-                  <span class="position-absolute top-0 start-0 m-1 badge bg-dark bg-opacity-75 small">
-                    <i class="bi bi-play-fill me-1"></i>{{ pendingVid()!.name | slice:0:20 }}
-                  </span>
-                  <button class="media-thumb__del" (click)="pendingVid.set(null); clearPendingVidUrl()" type="button">
-                    <i class="bi bi-x-lg"></i>
-                  </button>
-                </div>
-                <div class="d-flex gap-2 mt-2">
-                  <button type="button" class="btn btn-samsary btn-sm"
-                          (click)="uploadPendingVid(listing.id)" [disabled]="uploadingVid()">
-                    @if (uploadingVid()) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                    @else { <i class="bi bi-cloud-upload me-1"></i> }
-                    {{ i18n.lang() === 'ar' ? 'رفع الفيديو' : 'Upload video' }}
-                  </button>
-                  <button type="button" class="btn btn-light btn-sm" (click)="pendingVid.set(null); clearPendingVidUrl()"
-                          [disabled]="uploadingVid()">{{ 'common.cancel' | t }}</button>
-                </div>
-              }
-              @if (uploadingVid()) {
-                <div class="progress mt-2" style="height:3px">
-                  <div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div>
-                </div>
-              }
+                }
+                <input #vidInput type="file" accept="video/*" hidden (change)="onVidSelected($event, listing.id)">
+              </div>
             </div>
           </div>
 
@@ -447,7 +432,15 @@ const WIZARD_STEPS = [
             </div>
           }
 
-          <div class="text-end mt-3">
+          <div class="d-flex align-items-center justify-content-between mt-3">
+            @if (isUploading()) {
+              <div class="small text-muted d-flex align-items-center gap-2">
+                <span class="spinner-border spinner-border-sm text-primary"></span>
+                {{ i18n.lang() === 'ar' ? 'جاري رفع الملفات في الخلفية…' : 'Uploads in progress in the background…' }}
+              </div>
+            } @else {
+              <div></div>
+            }
             <button class="btn btn-samsary" (click)="finish()">
               <i class="bi bi-check2 me-1"></i>{{ 'form.submitReview' | t }}
             </button>
@@ -529,6 +522,13 @@ const WIZARD_STEPS = [
       background: rgba(0,0,0,.5); color: #fff; font-size: .65rem;
       padding: 2px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    /* Upload state overlays */
+    .upload-overlay {
+      position: absolute; inset: 0; display: flex; align-items: center;
+      justify-content: center; background: rgba(0,0,0,.45);
+    }
+    .upload-overlay--done { background: rgba(25,135,84,.55); }
+    .upload-overlay--err  { background: rgba(220,53,69,.55); }
     /* Thumbnail strip below carousel */
     .thumb-strip-item {
       flex: 0 0 56px; height: 40px; border-radius: .35rem; overflow: hidden;
@@ -571,8 +571,7 @@ export class ListingFormComponent implements OnInit, OnDestroy {
   uploadingImgs = signal(false);
   dragging = signal(false);
   draggingVid = signal(false);
-  pendingFiles = signal<File[]>([]);
-  pendingVid = signal<File | null>(null);
+  uploadItems = signal<UploadItem[]>([]);  // per-image async upload states
   resendingVerification = signal(false);
   error = signal<string | null>(null);
   mediaError = signal<string | null>(null);
@@ -585,6 +584,8 @@ export class ListingFormComponent implements OnInit, OnDestroy {
   private map?: L.Map;
   private marker?: L.Marker;
   private objectUrls: string[] = [];
+
+  isUploading = () => this.uploadingVid() || this.uploadItems().some(i => i.state === 'uploading');
 
   form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.maxLength(200)]],
@@ -731,103 +732,70 @@ export class ListingFormComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.map?.remove();
     this.objectUrls.forEach(u => URL.revokeObjectURL(u));
-    this.clearPendingVidUrl();
   }
 
-  // ── Drag & Drop ────────────────────────────────────────────────────────
+  // ── Async image upload (fire & forget per file) ────────────────────────
   onDrop(ev: DragEvent) {
     ev.preventDefault();
     this.dragging.set(false);
-    const files = Array.from(ev.dataTransfer?.files ?? []).filter(f => f.type.startsWith('image/'));
-    if (files.length) this.pendingFiles.update(p => [...p, ...files]);
+    const id = this.created()?.id;
+    if (!id) return;
+    Array.from(ev.dataTransfer?.files ?? [])
+      .filter(f => f.type.startsWith('image/'))
+      .forEach(f => this.startImgUpload(f, id));
   }
 
-  onFileSelected(ev: Event) {
-    const files = Array.from((ev.target as HTMLInputElement).files ?? []);
-    if (files.length) this.pendingFiles.update(p => [...p, ...files]);
+  onFileSelected(ev: Event, listingId: number) {
+    Array.from((ev.target as HTMLInputElement).files ?? [])
+      .forEach(f => this.startImgUpload(f, listingId));
     (ev.target as HTMLInputElement).value = '';
   }
 
-  previewUrl(file: File): string {
+  private startImgUpload(file: File, listingId: number) {
     const url = URL.createObjectURL(file);
     this.objectUrls.push(url);
-    return url;
+    const item: UploadItem = { file, previewUrl: url, state: 'uploading' };
+    this.uploadItems.update(list => [...list, item]);
+
+    this.api.uploadImage(listingId, file).subscribe({
+      next: () => {
+        this.uploadItems.update(list => list.map(i => i === item ? { ...i, state: 'done' } : i));
+        this.refresh(listingId);
+        // Remove done item after 2 seconds
+        setTimeout(() => this.uploadItems.update(list => list.filter(i => i !== item)), 2000);
+      },
+      error: e => {
+        const msg = e?.error?.detail || this.i18n.t('form.imageFailed');
+        this.uploadItems.update(list => list.map(i => i === item ? { ...i, state: 'error', error: msg } : i));
+        this.mediaError.set(msg);
+      }
+    });
   }
 
-  removePending(index: number) {
-    this.pendingFiles.update(p => p.filter((_, i) => i !== index));
-  }
-
-  clearPending() { this.pendingFiles.set([]); }
-
-  // ── Video drop & preview ───────────────────────────────────────────────
-  private _vidUrl: string | null = null;
-
-  onDropVid(ev: DragEvent) {
+  // ── Async video upload ──────────────────────────────────────────────────
+  onDropVid(ev: DragEvent, listingId: number) {
     ev.preventDefault();
     this.draggingVid.set(false);
     const f = Array.from(ev.dataTransfer?.files ?? []).find(f => f.type.startsWith('video/'));
-    if (f) { this.clearPendingVidUrl(); this.pendingVid.set(f); }
+    if (f) this.startVidUpload(f, listingId);
   }
 
-  onVidSelected(ev: Event) {
+  onVidSelected(ev: Event, listingId: number) {
     const f = (ev.target as HTMLInputElement).files?.[0];
-    if (f) { this.clearPendingVidUrl(); this.pendingVid.set(f); }
+    if (f) this.startVidUpload(f, listingId);
     (ev.target as HTMLInputElement).value = '';
   }
 
-  pendingVidUrl(): string {
-    if (!this._vidUrl && this.pendingVid()) {
-      this._vidUrl = URL.createObjectURL(this.pendingVid()!);
-      this.objectUrls.push(this._vidUrl);
-    }
-    return this._vidUrl ?? '';
-  }
-
-  clearPendingVidUrl() {
-    if (this._vidUrl) { URL.revokeObjectURL(this._vidUrl); this._vidUrl = null; }
-  }
-
-  uploadPendingVid(id: number) {
-    const f = this.pendingVid();
-    if (!f) return;
+  private startVidUpload(file: File, listingId: number) {
     this.mediaError.set(null);
     this.uploadingVid.set(true);
-    this.api.uploadVideo(id, f).subscribe({
-      next: () => {
-        this.uploadingVid.set(false);
-        this.pendingVid.set(null);
-        this.clearPendingVidUrl();
-        this.refresh(id);
-      },
+    this.api.uploadVideo(listingId, file).subscribe({
+      next: () => { this.uploadingVid.set(false); this.refresh(listingId); },
       error: e => {
         this.uploadingVid.set(false);
         this.mediaError.set(e?.error?.detail || this.i18n.t('form.videoFailed'));
       }
     });
-  }
-
-  uploadPending(id: number) {
-    const files = this.pendingFiles();
-    if (!files.length) return;
-    this.mediaError.set(null);
-    this.uploadingImgs.set(true);
-    const upload = (index: number) => {
-      if (index >= files.length) {
-        this.uploadingImgs.set(false);
-        this.pendingFiles.set([]);
-        this.refresh(id);
-        return;
-      }
-      this.api.uploadImage(id, files[index]).subscribe({
-        next: () => upload(index + 1),
-        error: e => {
-          this.uploadingImgs.set(false);
-          this.mediaError.set(e?.error?.detail || this.i18n.t('form.imageFailed'));
-        }
-      });
-    };
-    upload(0);
   }
 
   // ── Email verification ──────────────────────────────────────────────────

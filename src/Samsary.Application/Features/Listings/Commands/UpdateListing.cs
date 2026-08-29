@@ -10,7 +10,8 @@ using Samsary.Domain.Repositories;
 namespace Samsary.Application.Features.Listings.Commands;
 
 public sealed record UpdateListingCommand(
-    int Id, string Title, string Description, decimal Price, string Currency, ListingType Type, int CategoryId, string? Location)
+    int Id, string Title, string Description, decimal Price, string Currency, ListingType Type, int CategoryId, string? Location,
+    bool IsNegotiable = false, ListingStatus? Status = null)
     : ICommand<Result<ListingDto>>;
 
 public sealed class UpdateListingCommandValidator : AbstractValidator<UpdateListingCommand>
@@ -19,7 +20,7 @@ public sealed class UpdateListingCommandValidator : AbstractValidator<UpdateList
     {
         RuleFor(x => x.Title).NotEmpty().MaximumLength(200);
         RuleFor(x => x.Description).NotEmpty().MaximumLength(4000);
-        RuleFor(x => x.Price).InclusiveBetween(0, 999_999_999);
+        RuleFor(x => x.Price).GreaterThan(0).LessThanOrEqualTo(999_999_999);
         RuleFor(x => x.Currency).MaximumLength(8);
         RuleFor(x => x.Type).IsInEnum();
         RuleFor(x => x.CategoryId).GreaterThan(0);
@@ -56,7 +57,13 @@ public sealed class UpdateListingCommandHandler : ICommandHandler<UpdateListingC
         listing.Type = request.Type;
         listing.CategoryId = request.CategoryId;
         listing.Location = request.Location;
-        if (!_currentUser.IsAdmin) listing.Status = ListingStatus.Pending; // re-moderation after edit
+        listing.IsNegotiable = request.IsNegotiable;
+
+        // Owner can mark as Sold/Rented; any other edit resets to Pending for re-moderation
+        if (request.Status is ListingStatus.Sold or ListingStatus.Rented)
+            listing.Status = request.Status.Value;
+        else if (!_currentUser.IsAdmin)
+            listing.Status = ListingStatus.Pending;
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

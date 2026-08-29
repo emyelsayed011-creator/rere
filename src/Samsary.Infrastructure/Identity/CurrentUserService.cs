@@ -22,4 +22,7 @@ public class CurrentUserService : ICurrentUser
 
     public bool IsAdmin =>
         _accessor.HttpContext?.User.IsInRole(SeedData.AdminRole) == true;
+
+    public bool IsEmailConfirmed =>
+        _accessor.HttpContext?.User.FindFirstValue("email_verified") == "true";
 }

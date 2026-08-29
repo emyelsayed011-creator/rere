@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Samsary.Application.DTOs;
 using Samsary.Application.Features.Auth.Commands;
@@ -41,4 +42,9 @@ public class AuthController : ApiControllerBase
     [HttpPost("confirm-email")]
     public async Task<IActionResult> ConfirmEmail(ConfirmEmailDto dto, CancellationToken ct)
         => HandleResult(await _sender.Send(new ConfirmEmailCommand(dto.UserId, dto.Token), ct));
+
+    [Authorize]
+    [HttpPost("send-email-verification")]
+    public async Task<IActionResult> SendEmailVerification(CancellationToken ct)
+        => HandleResult(await _sender.Send(new SendEmailVerificationCommand(), ct));
 }
