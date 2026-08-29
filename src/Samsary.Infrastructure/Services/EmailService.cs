@@ -23,7 +23,8 @@ public class EmailService : IEmailService
     {
         if (string.IsNullOrWhiteSpace(_settings.SmtpHost))
         {
-            _logger.LogInformation("[EmailDev] To={To} Subject={Subject}", toEmail, subject);
+            // Dev mode — no SMTP host configured; print to log instead of sending
+            _logger.LogInformation("[EmailDev] To={To} Subject={Subject}\n{Body}", toEmail, subject, htmlBody);
             return;
         }
 
@@ -33,12 +34,23 @@ public class EmailService : IEmailService
         msg.Subject = subject;
         msg.Body = new BodyBuilder { HtmlBody = htmlBody }.ToMessageBody();
 
-        using var client = new SmtpClient();
-        await client.ConnectAsync(_settings.SmtpHost, _settings.SmtpPort,
-            _settings.UseSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.None, ct);
-        if (!string.IsNullOrEmpty(_settings.User))
-            await client.AuthenticateAsync(_settings.User, _settings.Password, ct);
-        await client.SendAsync(msg, ct);
-        await client.DisconnectAsync(true, ct);
+        try
+        {
+            using var client = new SmtpClient();
+            await client.ConnectAsync(_settings.SmtpHost, _settings.SmtpPort,
+                _settings.UseSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.None, ct);
+            if (!string.IsNullOrEmpty(_settings.User))
+                await client.AuthenticateAsync(_settings.User, _settings.Password, ct);
+            await client.SendAsync(msg, ct);
+            await client.DisconnectAsync(true, ct);
+            _logger.LogInformation("Email sent to {To} subject={Subject}", toEmail, subject);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to send email to {To}. Host={Host} Port={Port} User={User} FromAddress={From}",
+                toEmail, _settings.SmtpHost, _settings.SmtpPort, _settings.User, _settings.FromAddress);
+            throw;
+        }
     }
 }

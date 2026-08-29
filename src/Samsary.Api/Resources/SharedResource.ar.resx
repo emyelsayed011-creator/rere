@@ -79,6 +79,9 @@
   <data name="User.Unauthenticated" xml:space="preserve">
     <value>لم يتم تسجيل الدخول.</value>
   </data>
+  <data name="User.EmailNotConfirmed" xml:space="preserve">
+    <value>يرجى تأكيد بريدك الإلكتروني قبل نشر الإعلان. تحقق من بريدك الوارد للحصول على رابط التأكيد.</value>
+  </data>
   <data name="Problem.BadRequest" xml:space="preserve">
     <value>طلب غير صالح.</value>
   </data>

@@ -100,7 +100,7 @@ services:
       Email__SmtpPort: "${EMAIL_SMTP_PORT:-587}"
       Email__User: "${EMAIL_USER}"
       Email__Password: "${EMAIL_PASSWORD}"
-      Email__FromAddress: "${EMAIL_FROM_ADDRESS:-no-reply@samsary.local}"
+      Email__FromAddress: "${EMAIL_FROM_ADDRESS:-${EMAIL_USER}}"
       Email__FromName: "${EMAIL_FROM_NAME:-Samsary}"
       Redis__ConnectionString: "redis:6379"
       Sms__AccountSid: "${SMS_ACCOUNT_SID}"

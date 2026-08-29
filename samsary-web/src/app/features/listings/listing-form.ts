@@ -839,7 +839,15 @@ export class ListingFormComponent implements OnInit, OnDestroy {
               Object.fromEntries(Object.entries(apiErrors).map(([k, v]) => [k.toLowerCase(), v as string[]]))
             );
           }
-          this.error.set(e?.error?.detail || e?.error?.title || this.i18n.t('form.saveFailed'));
+          // Map known backend error codes to translated messages
+          const code = e?.error?.code ?? (apiErrors ? Object.keys(apiErrors)[0] : null);
+          const isEmailError = code === 'User.EmailNotConfirmed'
+            || (e?.error?.detail as string)?.toLowerCase().includes('confirm your email');
+          this.error.set(
+            isEmailError
+              ? this.i18n.t('form.emailNotConfirmed')
+              : (e?.error?.detail || e?.error?.title || this.i18n.t('form.saveFailed'))
+          );
           this.saving.set(false);
         }
       });
