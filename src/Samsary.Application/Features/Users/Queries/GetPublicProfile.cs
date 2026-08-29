@@ -12,7 +12,10 @@ public sealed record PublicUserDto(
     string? AvatarUrl,
     string? Bio,
     int ApprovedListingsCount,
-    DateTime? MemberSince);
+    DateTime? MemberSince,
+    string? Phone = null,
+    string? Email = null,
+    string? Country = null);
 
 public sealed record GetPublicProfileQuery(string UserId) : IQuery<Result<PublicUserDto>>;
 
@@ -29,6 +32,7 @@ public sealed class GetPublicProfileQueryHandler : IQueryHandler<GetPublicProfil
             .Select(u => new
             {
                 u.Id, u.DisplayName, u.AvatarUrl, u.Bio, u.CreatedAt,
+                u.PhoneNumber, u.Email, u.Country,
                 ListingCount = u.Listings.Count(l => l.Status == ListingStatus.Approved)
             })
             .FirstOrDefaultAsync(cancellationToken);
@@ -37,6 +41,6 @@ public sealed class GetPublicProfileQueryHandler : IQueryHandler<GetPublicProfil
             return Error.NotFound("User.NotFound", "User not found.");
 
         return new PublicUserDto(user.Id, user.DisplayName ?? "", user.AvatarUrl, user.Bio,
-            user.ListingCount, user.CreatedAt);
+            user.ListingCount, user.CreatedAt, user.PhoneNumber, user.Email, user.Country);
     }
 }

@@ -14,6 +14,7 @@ export class RealtimeService {
   readonly latestNotification = signal<NotificationItem | null>(null);
   readonly unreadDelta = signal(0);
   readonly messageRead = signal<number | null>(null);
+  readonly chatThreadOpened = signal(0);   // increments when user opens a thread and marks messages read
   readonly newListing = signal<{ id: number; title: string; category?: string; price: number; currency: string; type: number; location?: string } | null>(null);
 
   async connect() {
@@ -53,6 +54,8 @@ export class RealtimeService {
   async markRead(messageId: number) {
     await this.chat?.invoke('MarkRead', messageId);
   }
+
+  notifyThreadRead() { this.chatThreadOpened.update(v => v + 1); }
 
   async disconnect() {
     await this.chat?.stop(); this.chat = undefined;

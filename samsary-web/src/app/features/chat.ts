@@ -119,8 +119,10 @@ export class ChatComponent implements OnInit {
         this.api.thread(id).subscribe(t => {
           this.messages.set(t);
           // Mark all unread incoming messages via SignalR so sender sees ✓✓
-          t.filter(m => m.senderId === id && !m.isRead)
-           .forEach(m => this.rt.markRead(m.id));
+          const unreadIds = t.filter(m => m.senderId === id && !m.isRead).map(m => m.id);
+          unreadIds.forEach(mid => this.rt.markRead(mid));
+          // Notify navbar to refresh chat badge immediately
+          if (unreadIds.length > 0) this.rt.notifyThreadRead();
         });
       } else {
         this.messages.set([]);

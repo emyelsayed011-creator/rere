@@ -674,6 +674,9 @@ export class ListingFormComponent implements OnInit, OnDestroy {
     if (id) {
       this.editing.set(true);
       this.editingId = +id;
+      // In edit mode, phone is not required (existing listings may not have one)
+      this.form.controls.contactPhone.setValidators([Validators.pattern(/^(\+?2)?01[0125][0-9]{8}$/)]);
+      this.form.controls.contactPhone.updateValueAndValidity();
       this.api.listing(+id).subscribe(l => {
         this.form.patchValue({
           title: l.title, description: l.description, price: l.price,
@@ -684,7 +687,6 @@ export class ListingFormComponent implements OnInit, OnDestroy {
           contactPhone: l.ownerPhone || this.auth.user()?.phone || ''
         });
         this.created.set(l);
-        // In edit mode all steps render together, so map is available
         setTimeout(() => this.initMap(), 100);
       });
     }

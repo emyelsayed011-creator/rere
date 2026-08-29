@@ -10,6 +10,15 @@ import { Listing, PublicUser } from '../core/models';
   selector: 'app-user-profile',
   standalone: true,
   imports: [RouterLink, DatePipe, DecimalPipe, TranslatePipe],
+  styles: [`
+    .user-info-icon {
+      width: 26px; height: 26px; border-radius: .4rem; flex-shrink: 0;
+      background: var(--samsary-gradient-soft);
+      color: var(--samsary-primary);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: .78rem;
+    }
+  `],
   template: `
     @if (loading()) {
       <div class="text-center py-5"><span class="spinner-border"></span></div>
@@ -32,6 +41,44 @@ import { Listing, PublicUser } from '../core/models';
               @if (u.bio) {
                 <p class="text-muted small mb-2">{{ u.bio }}</p>
               }
+
+              <!-- Contact info -->
+              <div class="text-start mt-2 mb-3 d-flex flex-column gap-2">
+                @if (u.phone) {
+                  <a [href]="'tel:' + u.phone"
+                     class="d-flex align-items-center gap-2 text-decoration-none text-body small">
+                    <span class="user-info-icon"><i class="bi bi-telephone-fill"></i></span>
+                    <span>{{ u.phone }}</span>
+                  </a>
+                  <a [href]="'https://wa.me/' + u.phone.replace('+','').replace(/\s/g,'') + '?text=' + waMsg(u.displayName)"
+                     target="_blank" rel="noopener"
+                     class="d-flex align-items-center gap-2 text-decoration-none small"
+                     style="color:#25d366">
+                    <span class="user-info-icon" style="color:#25d366;background:rgba(37,211,102,.12)">
+                      <i class="bi bi-whatsapp"></i>
+                    </span>
+                    <span>WhatsApp</span>
+                  </a>
+                }
+                @if (u.email) {
+                  <a [href]="'mailto:' + u.email"
+                     class="d-flex align-items-center gap-2 text-decoration-none text-body small">
+                    <span class="user-info-icon"><i class="bi bi-envelope-fill"></i></span>
+                    <span class="text-truncate">{{ u.email }}</span>
+                  </a>
+                }
+                @if (u.country) {
+                  <div class="d-flex align-items-center gap-2 small text-muted">
+                    <span class="user-info-icon"><i class="bi bi-geo-alt-fill"></i></span>
+                    <span>{{ u.country }}</span>
+                  </div>
+                }
+                @if (!u.phone && !u.email && !u.country) {
+                  <div class="small text-muted fst-italic">
+                    {{ i18n.lang() === 'ar' ? 'لم يضف هذا المستخدم بيانات تواصل بعد' : 'No contact info added yet' }}
+                  </div>
+                }
+              </div>
               <div class="d-flex justify-content-center gap-3 mt-2 mb-3">
                 <div class="text-center">
                   <div class="fw-bold fs-5" style="color:var(--samsary-primary)">{{ u.approvedListingsCount }}</div>
@@ -86,7 +133,7 @@ import { Listing, PublicUser } from '../core/models';
                           <i class="bi bi-image fs-2"></i>
                         </div>
                       }
-                      <span class="badge position-absolute top-0 start-0 m-2 text-white"
+                      <span class="badge badge-type text-white"
                             [class.bg-success]="l.type===1" [class.bg-info]="l.type===2">
                         {{ (l.type === 1 ? 'common.sale' : 'common.rent') | t }}
                       </span>
@@ -122,6 +169,14 @@ export class UserProfileComponent implements OnInit {
   loading = signal(true);
   user = signal<PublicUser | null>(null);
   listings = signal<Listing[]>([]);
+
+  waMsg(name: string) {
+    return encodeURIComponent(
+      this.i18n.lang() === 'ar'
+        ? `السلام عليكم ${name}، رأيت إعلانك على سمسارلي وأرغب في التواصل`
+        : `Hi ${name}, I found your listing on Samsarly and would like to get in touch`
+    );
+  }
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id')!;

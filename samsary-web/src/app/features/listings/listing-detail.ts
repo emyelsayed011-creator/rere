@@ -189,7 +189,8 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
               </a>
 
               <!-- Phone -->
-              @if (l.ownerPhone && l.status !== ListingStatus.Sold && l.status !== ListingStatus.Rented) {
+              @if (l.ownerPhone && auth.user()?.id !== l.ownerId
+                   && l.status !== ListingStatus.Sold && l.status !== ListingStatus.Rented) {
                 <a [href]="'tel:' + l.ownerPhone" class="btn btn-outline-success w-100 mb-2">
                   <i class="bi bi-telephone-fill me-2"></i>{{ l.ownerPhone }}
                 </a>
