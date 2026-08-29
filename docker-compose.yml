@@ -29,11 +29,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
-      - "5432:5432"            # remove this line if you don't need DB access from the host
+      - "5432:5432" # remove this line if you don't need DB access from the host
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-samsary}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-samsary}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -45,7 +45,7 @@ services:
     environment:
       ACCEPT_EULA: "Y"
     ports:
-      - "5341:80"              # Seq UI + ingestion (open http://localhost:5341)
+      - "5341:80" # Seq UI + ingestion (open http://localhost:5341)
     volumes:
       - seq-data:/data
 
@@ -59,14 +59,14 @@ services:
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
   api:
     build:
-      context: .                          # repo root, so all projects are visible
+      context: . # repo root, so all projects are visible
       dockerfile: src/Samsary.Api/Dockerfile
     image: ${REGISTRY:-samsary}/samsary-api:${TAG:-latest}
     container_name: samsary-api
@@ -76,6 +76,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/theme || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: "8080"
@@ -102,9 +108,9 @@ services:
       Sms__FromNumber: "${SMS_FROM_NUMBER}"
       Seq__ApiKey: "${SEQ_API_KEY}"
     ports:
-      - "5013:8080"            # call the API directly at http://localhost:5013 (optional)
+      - "5013:8080" # call the API directly at http://localhost:5013 (optional)
     volumes:
-      - api-logs:/app/Logs     # persist Serilog file logs
+      - api-logs:/app/Logs # persist Serilog file logs
 
   web:
     build:
@@ -114,13 +120,13 @@ services:
     container_name: samsary-web
     restart: unless-stopped
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     ports:
-      - "8080:80"              # the app users open: http://localhost:8080
+      - "8080:80" # the app users open: http://localhost:8080
 
 volumes:
   db-data:
   seq-data:
   redis-data:
   api-logs:
-  redis-data:

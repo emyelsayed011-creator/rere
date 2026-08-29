@@ -18,7 +18,7 @@ public sealed class RegisterCommandValidator : AbstractValidator<RegisterCommand
         RuleFor(x => x.DisplayName).NotEmpty().MaximumLength(80);
         RuleFor(x => x.Phone).NotEmpty()
             .Matches(@"^(\+?2)?01[0125][0-9]{8}$")
-            .WithMessage("Enter a valid Egyptian phone number (e.g. 01006205467).");
+            .WithMessage("Enter a valid Egyptian phone number");
     }
 }
 

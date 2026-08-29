@@ -27,8 +27,8 @@ const CURRENCIES = [
 
 const WIZARD_STEPS = [
   { num: 1, en: 'Type & Category', ar: 'النوع والفئة' },
-  { num: 2, en: 'Details',         ar: 'التفاصيل' },
-  { num: 3, en: 'Location',        ar: 'الموقع' },
+  { num: 2, en: 'Details', ar: 'التفاصيل' },
+  { num: 3, en: 'Location', ar: 'الموقع' },
 ];
 
 @Component({
@@ -88,13 +88,11 @@ const WIZARD_STEPS = [
                          (click)="form.patchValue({type: 1})" role="button">
                       <i class="bi bi-currency-exchange fs-2 mb-2 d-block"></i>
                       <div class="fw-bold">{{ 'common.sell' | t }}</div>
-                      <div class="small opacity-75">{{ 'common.sale' | t }}</div>
                     </div>
                     <div class="listing-type-card" [class.selected]="form.controls.type.value === 2"
                          (click)="form.patchValue({type: 2})" role="button">
                       <i class="bi bi-house-door fs-2 mb-2 d-block"></i>
                       <div class="fw-bold">{{ 'common.rentShort' | t }}</div>
-                      <div class="small opacity-75">{{ 'common.rent' | t }}</div>
                     </div>
                   </div>
                 </div>
@@ -819,9 +817,9 @@ export class ListingFormComponent implements OnInit, OnDestroy {
     const newPhone = body.contactPhone?.trim();
     const syncPhone$ = (newPhone && newPhone !== currentPhone)
       ? this.api.updateProfile({
-          displayName: this.auth.user()?.displayName ?? '',
-          phone: newPhone
-        })
+        displayName: this.auth.user()?.displayName ?? '',
+        phone: newPhone
+      })
       : null;
 
     const doSave = () => {

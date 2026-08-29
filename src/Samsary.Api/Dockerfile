@@ -30,7 +30,7 @@ WORKDIR /app
 
 # ffmpeg is required by Xabe.FFmpeg for the video-upload / transcoding feature.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg \
+    && apt-get install -y --no-install-recommends ffmpeg curl \
     && rm -rf /var/lib/apt/lists/*
 
 # The .NET runtime images listen on port 8080 by default (non-root friendly).

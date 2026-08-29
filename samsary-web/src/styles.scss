@@ -70,7 +70,8 @@ html[dir='rtl'] body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px; height: 32px;
+  width: 32px;
+  height: 32px;
   border-radius: .5rem;
   background: var(--samsary-gradient);
   color: #fff !important;
@@ -78,7 +79,10 @@ html[dir='rtl'] body {
   flex-shrink: 0;
 }
 
-.navbar-brand-text { display: inline-block; white-space: nowrap; }
+.navbar-brand-text {
+  display: inline-block;
+  white-space: nowrap;
+}
 
 .text-primary {
   color: var(--samsary-primary) !important;
@@ -196,8 +200,12 @@ a {
   position: absolute;
   top: 12px;
   inset-inline-start: 12px;
-  border-radius: 999px;
-  padding: .4rem .7rem;
+  border-radius: .6rem;
+  padding: .35rem .65rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  white-space: nowrap;
   font-weight: 600;
   backdrop-filter: blur(4px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, .15);
@@ -332,8 +340,8 @@ a {
 /* ---------- Navbar ---------- */
 .navbar {
   background: #fff !important;
-  border-bottom: 1px solid rgba(0,0,0,.07) !important;
-  box-shadow: 0 1px 8px rgba(0,0,0,.06);
+  border-bottom: 1px solid rgba(0, 0, 0, .07) !important;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, .06);
   padding-top: .6rem;
   padding-bottom: .6rem;
 }
