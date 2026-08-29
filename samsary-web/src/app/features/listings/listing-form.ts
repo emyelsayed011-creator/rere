@@ -254,7 +254,7 @@ const WIZARD_STEPS = [
               @if (step() === 3 || editing()) {
                 <div class="d-flex gap-2">
                   <button type="button" class="btn btn-light" (click)="cancel()">{{ 'common.cancel' | t }}</button>
-                  <button class="btn btn-samsary" [disabled]="form.invalid || saving() || !emailOk()">
+                  <button class="btn btn-samsary" [disabled]="!canSave() || saving()">
                     @if (saving()) { <span class="spinner-border spinner-border-sm me-2"></span> }
                     {{ (editing() ? 'form.save' : 'form.createContinue') | t }}
                   </button>
@@ -612,6 +612,17 @@ export class ListingFormComponent implements OnInit, OnDestroy {
     return this.editing() || this.auth.user()?.emailConfirmed !== false;
   }
 
+  canSave(): boolean {
+    if (!this.emailOk()) return false;
+    if (this.editing()) {
+      // In edit mode only validate the core fields; location/phone may be absent on older listings
+      const f = this.form.controls;
+      return f.title.valid && f.description.valid && f.price.valid && f.currency.valid
+          && f.type.valid && f.categoryId.valid;
+    }
+    return this.form.valid;
+  }
+
   canNext(): boolean {
     if (!this.emailOk()) return false;
     const f = this.form.controls;
@@ -674,7 +685,9 @@ export class ListingFormComponent implements OnInit, OnDestroy {
     if (id) {
       this.editing.set(true);
       this.editingId = +id;
-      // In edit mode, phone is not required (existing listings may not have one)
+      // In edit mode remove required from location + phone — older listings may lack them
+      this.form.controls.location.setValidators([Validators.maxLength(200)]);
+      this.form.controls.location.updateValueAndValidity();
       this.form.controls.contactPhone.setValidators([Validators.pattern(/^(\+?2)?01[0125][0-9]{8}$/)]);
       this.form.controls.contactPhone.updateValueAndValidity();
       this.api.listing(+id).subscribe(l => {
@@ -820,7 +833,7 @@ export class ListingFormComponent implements OnInit, OnDestroy {
   }
 
   save() {
-    if (this.form.invalid) return;
+    if (!this.canSave()) return;
     this.saving.set(true);
     this.error.set(null);
     this.validationErrors.set({});
