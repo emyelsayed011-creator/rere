@@ -42,9 +42,9 @@ export class AuthService {
     this.persist(r);
   }
 
-  async register(email: string, password: string, displayName: string) {
+  async register(email: string, password: string, displayName: string, phone: string) {
     const r = await firstValueFrom(
-      this.http.post<AuthResponse>(`${environment.apiBase}/auth/register`, { email, password, displayName })
+      this.http.post<AuthResponse>(`${environment.apiBase}/auth/register`, { email, password, displayName, phone })
     );
     this.persist(r);
   }

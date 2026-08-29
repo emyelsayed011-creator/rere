@@ -94,6 +94,11 @@ const EN: Dict = {
   'form.saveFailed': 'Failed to save.',
   'form.uploadMedia': 'Upload media (images, video up to 5 min)',
   'form.videoInfo': 'Videos are validated by Cloudinary; uploads longer than 5 minutes are rejected automatically.',
+  'form.addImages': 'Photos',
+  'form.multiImageHint': 'Select multiple photos at once',
+  'form.videoHint': 'Max 5 minutes',
+  'form.optional': 'optional',
+  'form.locationRequired': 'Please pick a location on the map',
   'form.addImage': 'Add image',
   'form.addVideo': 'Add video',
   'form.imageFailed': 'Image upload failed.',
@@ -102,6 +107,9 @@ const EN: Dict = {
 
   // Auth
   'auth.welcomeBack': 'Welcome back',
+  'auth.registerSubtitle': 'Create your account to start listing.',
+  'auth.phone': 'Phone Number',
+  'auth.phoneInvalid': 'Enter a valid phone number (e.g. +20 100 000 0000)',
   'auth.email': 'Email',
   'auth.password': 'Password',
   'auth.signIn': 'Sign in',
@@ -314,6 +322,11 @@ const AR: Dict = {
   'form.saveFailed': 'فشل الحفظ.',
   'form.uploadMedia': 'رفع الوسائط (صور، فيديو حتى ٥ دقائق)',
   'form.videoInfo': 'يتم التحقق من الفيديوهات عبر Cloudinary؛ يُرفض ما يزيد عن ٥ دقائق تلقائياً.',
+  'form.addImages': 'صور',
+  'form.multiImageHint': 'يمكنك اختيار عدة صور معاً',
+  'form.videoHint': 'حد أقصى 5 دقائق',
+  'form.optional': 'اختياري',
+  'form.locationRequired': 'يرجى تحديد الموقع من الخريطة',
   'form.addImage': 'أضف صورة',
   'form.addVideo': 'أضف فيديو',
   'form.imageFailed': 'فشل رفع الصورة.',
@@ -322,6 +335,9 @@ const AR: Dict = {
 
   // Auth
   'auth.welcomeBack': 'مرحباً بعودتك',
+  'auth.registerSubtitle': 'أنشئ حسابك للبدء في النشر.',
+  'auth.phone': 'رقم الهاتف',
+  'auth.phoneInvalid': 'أدخل رقم هاتف صحيح (e.g. +20 100 000 0000)',
   'auth.email': 'البريد الإلكتروني',
   'auth.password': 'كلمة المرور',
   'auth.signIn': 'تسجيل الدخول',

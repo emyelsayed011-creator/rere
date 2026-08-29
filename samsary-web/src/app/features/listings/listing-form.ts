@@ -58,24 +58,23 @@ const CURRENCIES = [
           </div>
           <div class="col-md-6">
             <div class="listing-form-panel h-100">
-              <label class="form-label fw-medium">{{ 'form.location' | t }}</label>
+              <label class="form-label fw-medium">
+                {{ 'form.location' | t }} <span class="text-danger">*</span>
+              </label>
               <div class="input-group mb-2">
                 <input class="form-control" formControlName="location" maxlength="200"
-                       [placeholder]="'form.locationPlaceholder' | t">
+                       [placeholder]="'form.locationPlaceholder' | t" readonly>
                 <button type="button" class="btn btn-outline-secondary" (click)="detectLocation()"
                         [title]="'form.detectLocation' | t" [disabled]="locating()">
                   @if (locating()) { <span class="spinner-border spinner-border-sm"></span> }
                   @else { <i class="bi bi-geo-alt-fill"></i> }
                 </button>
-                <button type="button" class="btn btn-outline-primary" (click)="toggleMap()"
-                        [title]="'form.pickOnMap' | t">
-                  <i class="bi bi-map"></i>
-                </button>
               </div>
-              @if (showMap()) {
-                <div class="small text-muted mb-1"><i class="bi bi-info-circle me-1"></i>{{ 'form.mapHint' | t }}</div>
-                <div #mapEl style="height:260px;border-radius:.75rem;overflow:hidden;border:1px solid #dee2e6"></div>
+              @if (form.controls.location.invalid && form.controls.location.touched) {
+                <div class="text-danger small mb-1">{{ 'form.locationRequired' | t }}</div>
               }
+              <div class="small text-muted mb-1"><i class="bi bi-info-circle me-1"></i>{{ 'form.mapHint' | t }}</div>
+              <div #mapEl style="height:240px;border-radius:.75rem;overflow:hidden;border:1px solid #dee2e6"></div>
             </div>
           </div>
           <div class="col-12">
@@ -104,15 +103,29 @@ const CURRENCIES = [
             <i class="bi bi-info-circle me-1"></i>{{ 'form.videoInfo' | t }}
           </div>
           <div class="row g-3 mb-3 listing-media-box">
-            <div class="col-md-6">
-              <label class="form-label">{{ 'form.addImage' | t }}</label>
-              <input type="file" class="form-control" accept="image/*" (change)="uploadImg($event, listing.id)">
+            <div class="col-md-7">
+              <label class="form-label fw-semibold">
+                <i class="bi bi-images me-1 text-primary"></i>{{ 'form.addImages' | t }}
+                <span class="text-muted fw-normal small ms-1">({{ 'form.optional' | t }})</span>
+              </label>
+              <input type="file" class="form-control" accept="image/*" multiple
+                     (change)="uploadImages($event, listing.id)">
+              <div class="form-text">{{ 'form.multiImageHint' | t }}</div>
+              @if (uploadingImgs()) {
+                <div class="progress mt-2" style="height:4px">
+                  <div class="progress-bar progress-bar-striped progress-bar-animated" style="width:100%"></div>
+                </div>
+              }
             </div>
-            <div class="col-md-6">
-              <label class="form-label">{{ 'form.addVideo' | t }}</label>
+            <div class="col-md-5">
+              <label class="form-label fw-semibold">
+                <i class="bi bi-camera-video me-1 text-primary"></i>{{ 'form.addVideo' | t }}
+                <span class="text-muted fw-normal small ms-1">({{ 'form.optional' | t }})</span>
+              </label>
               <input type="file" class="form-control" accept="video/*" (change)="uploadVid($event, listing.id)">
+              <div class="form-text">{{ 'form.videoHint' | t }}</div>
               @if (uploadingVid()) {
-                <div class="progress mt-2" style="height:6px">
+                <div class="progress mt-2" style="height:4px">
                   <div class="progress-bar progress-bar-striped progress-bar-animated" style="width:100%"></div>
                 </div>
               }
@@ -158,7 +171,8 @@ export class ListingFormComponent implements OnInit, OnDestroy {
   saving = signal(false);
   locating = signal(false);
   uploadingVid = signal(false);
-  showMap = signal(false);
+  uploadingImgs = signal(false);
+  showMap = signal(true); // map open by default
   error = signal<string | null>(null);
   mediaError = signal<string | null>(null);
   editing = signal(false);
@@ -176,12 +190,28 @@ export class ListingFormComponent implements OnInit, OnDestroy {
     currency: ['EGP', [Validators.required]],
     type: [ListingType.Sell, [Validators.required]],
     categoryId: [0 as number, [Validators.required]],
-    location: ['']
+    location: ['', [Validators.required]]
   });
 
   fieldError(field: string): string | null {
     const errs = this.validationErrors()[field];
     return errs?.length ? errs[0] : null;
+  }
+
+  private reverseGeocode(lat: number, lng: number) {
+    // Use Nominatim (free, no API key needed)
+    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=ar`)
+      .then(r => r.json())
+      .then(data => {
+        const addr = data?.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        // Show city-level address (not full verbose string)
+        const parts = data?.address;
+        const label = parts
+          ? [parts.suburb, parts.city || parts.town || parts.village, parts.state].filter(Boolean).join(', ')
+          : addr;
+        this.form.patchValue({ location: label || addr });
+      })
+      .catch(() => this.form.patchValue({ location: `${lat.toFixed(5)}, ${lng.toFixed(5)}` }));
   }
 
   ngOnInit() {
@@ -202,6 +232,8 @@ export class ListingFormComponent implements OnInit, OnDestroy {
         this.created.set(l);
       });
     }
+    // Open map by default after DOM is ready
+    setTimeout(() => this.initMap(), 100);
   }
 
   detectLocation() {
@@ -221,7 +253,6 @@ export class ListingFormComponent implements OnInit, OnDestroy {
   toggleMap() {
     this.showMap.update(v => !v);
     if (this.showMap()) {
-      // defer until the DOM renders the map container
       setTimeout(() => this.initMap(), 50);
     } else {
       this.map?.remove();
@@ -249,12 +280,12 @@ export class ListingFormComponent implements OnInit, OnDestroy {
     }).addTo(this.map);
     this.marker.on('dragend', () => {
       const { lat: la, lng: lo } = this.marker!.getLatLng();
-      this.form.patchValue({ location: `${la.toFixed(5)}, ${lo.toFixed(5)}` });
+      this.reverseGeocode(la, lo);
     });
 
     this.map.on('click', (e: L.LeafletMouseEvent) => {
       this.marker!.setLatLng(e.latlng);
-      this.form.patchValue({ location: `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}` });
+      this.reverseGeocode(e.latlng.lat, e.latlng.lng);
     });
   }
 
@@ -290,6 +321,22 @@ export class ListingFormComponent implements OnInit, OnDestroy {
         this.saving.set(false);
       }
     });
+  }
+
+  // Upload multiple images sequentially
+  uploadImages(ev: Event, id: number) {
+    const files = Array.from((ev.target as HTMLInputElement).files ?? []);
+    if (!files.length) return;
+    this.mediaError.set(null);
+    this.uploadingImgs.set(true);
+    const upload = (index: number) => {
+      if (index >= files.length) { this.uploadingImgs.set(false); this.refresh(id); return; }
+      this.api.uploadImage(id, files[index]).subscribe({
+        next: () => upload(index + 1),
+        error: e => { this.uploadingImgs.set(false); this.mediaError.set(e?.error?.detail || this.i18n.t('form.imageFailed')); }
+      });
+    };
+    upload(0);
   }
 
   uploadImg(ev: Event, id: number) {

@@ -45,7 +45,7 @@ public sealed class IdentityService : IIdentityService
         _logger = logger;
     }
 
-    public async Task<Result<AuthResponseDto>> RegisterAsync(string email, string password, string displayName, CancellationToken cancellationToken = default)
+    public async Task<Result<AuthResponseDto>> RegisterAsync(string email, string password, string displayName, string phone, CancellationToken cancellationToken = default)
     {
         if (await _userManager.FindByEmailAsync(email) is not null)
             return Error.Conflict("Auth.EmailTaken", "Email already registered.");
@@ -55,7 +55,8 @@ public sealed class IdentityService : IIdentityService
             UserName = email,
             Email = email,
             DisplayName = displayName,
-            EmailConfirmed = false   // Require email verification.
+            PhoneNumber = phone,
+            EmailConfirmed = false
         };
 
         var result = await _userManager.CreateAsync(user, password);
@@ -116,8 +117,7 @@ public sealed class IdentityService : IIdentityService
         var (accessToken, expiresAt) = await _jwt.CreateTokenAsync(user);
         var roles = await _userManager.GetRolesAsync(user);
         return new AuthResponseDto(accessToken, expiresAt,
-            new UserDto(user.Id, user.Email ?? "", user.DisplayName, user.AvatarUrl, user.Bio, roles,
-                null, null, null, user.PhoneNumber),
+            new UserDto(user.Id, user.Email ?? "", user.DisplayName, user.AvatarUrl, user.Bio, roles),
             newRawToken);
     }
 
@@ -142,7 +142,7 @@ public sealed class IdentityService : IIdentityService
     }
 
     public async Task<Result<UserDto>> UpdateProfileAsync(string userId, string displayName, string? bio, string? avatarUrl,
-        DateTime? dateOfBirth, string? gender, string? country, string? phoneNumber, CancellationToken cancellationToken = default)
+        DateTime? dateOfBirth, string? gender, string? country, string? phone, CancellationToken cancellationToken = default)
     {
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null) return Error.NotFound("User.NotFound", "User not found.");
@@ -153,7 +153,7 @@ public sealed class IdentityService : IIdentityService
         user.DateOfBirth = dateOfBirth;
         user.Gender = gender?.ToLowerInvariant();
         user.Country = country?.ToUpperInvariant();
-        user.PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber.Trim();
+        if (!string.IsNullOrWhiteSpace(phone)) user.PhoneNumber = phone;
 
         var result = await _userManager.UpdateAsync(user);
         return result.Succeeded
@@ -246,8 +246,7 @@ public sealed class IdentityService : IIdentityService
         await _uow.SaveChangesAsync(ct);
 
         return new AuthResponseDto(accessToken, expiresAt,
-            new UserDto(user.Id, user.Email ?? "", user.DisplayName, user.AvatarUrl, user.Bio, roles,
-                null, null, null, user.PhoneNumber),
+            new UserDto(user.Id, user.Email ?? "", user.DisplayName, user.AvatarUrl, user.Bio, roles),
             rawRefreshToken);
     }
 

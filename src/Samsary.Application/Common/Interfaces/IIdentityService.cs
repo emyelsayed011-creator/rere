@@ -9,13 +9,13 @@ namespace Samsary.Application.Common.Interfaces;
 /// </summary>
 public interface IIdentityService
 {
-    Task<Result<AuthResponseDto>> RegisterAsync(string email, string password, string displayName, CancellationToken cancellationToken = default);
+    Task<Result<AuthResponseDto>> RegisterAsync(string email, string password, string displayName, string phone, CancellationToken cancellationToken = default);
     Task<Result<AuthResponseDto>> LoginAsync(string email, string password, CancellationToken cancellationToken = default);
     Task<Result<AuthResponseDto>> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default);
     Task<Result> LogoutAsync(string refreshToken, CancellationToken cancellationToken = default);
     Task<Result<UserDto>> GetByIdAsync(string userId, CancellationToken cancellationToken = default);
     Task<Result<UserDto>> UpdateProfileAsync(string userId, string displayName, string? bio, string? avatarUrl,
-        DateTime? dateOfBirth, string? gender, string? country, string? phoneNumber, CancellationToken cancellationToken = default);
+        DateTime? dateOfBirth, string? gender, string? country, string? phone, CancellationToken cancellationToken = default);
     Task<Result<UserDto>> SetAvatarAsync(string userId, string avatarUrl, CancellationToken cancellationToken = default);
     Task<Result> ChangePasswordAsync(string userId, string currentPassword, string newPassword, CancellationToken cancellationToken = default);
     Task<Result> SendEmailVerificationAsync(string userId, CancellationToken cancellationToken = default);

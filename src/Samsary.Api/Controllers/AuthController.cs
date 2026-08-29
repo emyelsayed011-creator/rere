@@ -15,7 +15,7 @@ public class AuthController : ApiControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterDto dto, CancellationToken ct)
         => HandleResult(
-            await _sender.Send(new RegisterCommand(dto.Email, dto.Password, dto.DisplayName), ct),
+            await _sender.Send(new RegisterCommand(dto.Email, dto.Password, dto.DisplayName, dto.Phone), ct),
             created => CreatedAtAction(nameof(Register), created));
 
     [HttpPost("login")]
