@@ -94,7 +94,7 @@ export class ProfileComponent {
 
   form = this.fb.nonNullable.group({
     displayName: [this.auth.user()?.displayName ?? '', [Validators.required, Validators.maxLength(80)]],
-    phoneNumber: [this.auth.user()?.phoneNumber ?? '', [Validators.required, Validators.pattern(/^[0-9+()\-\s]{7,20}$/)]],
+    phoneNumber: [this.auth.user()?.phone ?? '', [Validators.required, Validators.pattern(/^[0-9+()\-\s]{7,20}$/)]],
     bio: [this.auth.user()?.bio ?? '']
   });
 
