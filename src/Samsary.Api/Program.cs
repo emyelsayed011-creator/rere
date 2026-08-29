@@ -71,13 +71,16 @@ builder.Host.UseWolverine(opts =>
 // builder.Services.AddResourceSetupOnStartup();
 
 const string AngularCors = "AngularCors";
+var corsOrigins = new List<string>
+{
+    "http://localhost:4200", "https://localhost:4200",
+    "http://localhost:8080", "https://localhost:8080"
+};
+corsOrigins.AddRange(
+    (builder.Configuration["Cors:Origins"] ?? "")
+        .Split(',', StringSplitOptions.RemoveEmptyEntries));
 builder.Services.AddCors(o => o.AddPolicy(AngularCors, p => p
-    .WithOrigins(
-        // local dev
-        "http://localhost:4200", "https://localhost:4200",
-        "http://localhost:8080", "https://localhost:8080",
-        // production — override via CORS_ORIGINS env var (comma-separated)
-        ...(builder.Configuration["Cors:Origins"] ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries))
+    .WithOrigins(corsOrigins.ToArray())
     .AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
 // ── Permission-based policies for moderator access ────────────────────────────

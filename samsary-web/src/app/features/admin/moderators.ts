@@ -202,14 +202,16 @@ interface PermissionMeta {
                     </td>
                     <td class="text-muted small">{{ m.createdAt | date:'mediumDate' }}</td>
                     <td class="pe-4 text-end">
-                      <button class="btn btn-sm btn-outline-primary me-1"
-                              (click)="openEdit(m)">
-                        <i class="bi bi-pencil"></i>
-                      </button>
-                      <button class="btn btn-sm btn-outline-danger"
-                              (click)="confirmRemove(m)">
-                        <i class="bi bi-person-dash"></i>
-                      </button>
+                      <div class="d-flex gap-1 justify-content-end">
+                        <button class="btn btn-sm btn-outline-primary"
+                                (click)="openEdit(m)">
+                          <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger"
+                                (click)="removeTarget.set(m)">
+                          <i class="bi bi-person-dash"></i>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 }
@@ -219,6 +221,31 @@ interface PermissionMeta {
         }
       </div>
     </div>
+
+    <!-- ── Remove confirm ── -->
+    @if (removeTarget(); as m) {
+      <div class="modal-backdrop" style="position:fixed;inset:0;z-index:1040;background:rgba(0,0,0,.45)" (click)="removeTarget.set(null)"></div>
+      <div class="modal d-block" style="position:fixed;inset:0;z-index:1050" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+          <div class="modal-content border-0 shadow-lg rounded-3">
+            <div class="modal-body p-4 text-center">
+              <i class="bi bi-person-dash-fill text-danger mb-3 d-block" style="font-size:2.5rem"></i>
+              <h5 class="fw-bold mb-2">
+                {{ i18n.lang() === 'ar' ? 'إزالة صلاحيات المشرف' : 'Remove Moderator' }}
+              </h5>
+              <p class="text-muted small mb-0">{{ m.displayName }}</p>
+            </div>
+            <div class="modal-footer border-0 d-flex gap-2 justify-content-center pb-4">
+              <button class="btn btn-light px-4" (click)="removeTarget.set(null)">{{ 'common.cancel' | t }}</button>
+              <button class="btn btn-danger px-4" [disabled]="saving()" (click)="doRemove(m)">
+                @if (saving()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                {{ i18n.lang() === 'ar' ? 'إزالة' : 'Remove' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
 
     <!-- ── Edit permissions modal ── -->
     @if (editing()) {
@@ -266,7 +293,7 @@ interface PermissionMeta {
 })
 export class AdminModeratorsComponent implements OnInit {
   private api = inject(ApiService);
-  private i18n = inject(I18nService);
+  readonly i18n = inject(I18nService);
 
   loading = signal(true);
   saving = signal(false);
@@ -274,6 +301,7 @@ export class AdminModeratorsComponent implements OnInit {
   showAdd = signal(false);
   addMode = signal<'existing' | 'new'>('existing');
   editing = signal<Moderator | null>(null);
+  removeTarget = signal<Moderator | null>(null);
   addError = signal<string | null>(null);
 
   // Add form state (existing user)
@@ -313,11 +341,8 @@ export class AdminModeratorsComponent implements OnInit {
     this.selectedUser.set(null);
     this.searchTimer = setTimeout(() => {
       if (this.addSearch.length < 2) { this.userResults.set([]); return; }
-      this.api.adminUsers(1).subscribe(r => {
-        const q = this.addSearch.toLowerCase();
-        this.userResults.set((r.items ?? r).filter((u: any) =>
-          u.email?.toLowerCase().includes(q) || u.displayName?.toLowerCase().includes(q)
-        ).slice(0, 5));
+      this.api.adminSearchUsers(this.addSearch).subscribe(r => {
+        this.userResults.set((r.items ?? r).slice(0, 5));
       });
     }, 300);
   }
@@ -355,7 +380,7 @@ export class AdminModeratorsComponent implements OnInit {
     this.api.adminCreateUser(this.newUser).subscribe({
       next: created => {
         this.api.createModerator(created.id, this.addPerms as any).subscribe({
-          next: m => { this.moderators.update(list => [m, ...list]); this.saving.set(false); this.cancelAdd(); },
+          next: () => { this.saving.set(false); this.cancelAdd(); this.load(); },
           error: e => { this.addError.set(e?.error?.detail ?? this.i18n.t('common.failed')); this.saving.set(false); }
         });
       },
@@ -368,15 +393,8 @@ export class AdminModeratorsComponent implements OnInit {
     if (!user || !this.addPerms) return;
     this.saving.set(true); this.addError.set(null);
     this.api.createModerator(user.id, this.addPerms).subscribe({
-      next: m => {
-        this.moderators.update(list => [m, ...list]);
-        this.saving.set(false);
-        this.cancelAdd();
-      },
-      error: e => {
-        this.addError.set(e?.error?.detail ?? this.i18n.t('common.failed'));
-        this.saving.set(false);
-      }
+      next: () => { this.saving.set(false); this.cancelAdd(); this.load(); },
+      error: e => { this.addError.set(e?.error?.detail ?? this.i18n.t('common.failed')); this.saving.set(false); }
     });
   }
 
@@ -399,10 +417,15 @@ export class AdminModeratorsComponent implements OnInit {
     });
   }
 
-  confirmRemove(m: Moderator) {
-    if (!confirm(`Remove moderator role from ${m.displayName}?`)) return;
+  doRemove(m: Moderator) {
+    this.saving.set(true);
     this.api.removeModerator(m.userId).subscribe({
-      next: () => this.moderators.update(list => list.filter(x => x.userId !== m.userId))
+      next: () => {
+        this.moderators.update(list => list.filter(x => x.userId !== m.userId));
+        this.removeTarget.set(null);
+        this.saving.set(false);
+      },
+      error: () => this.saving.set(false)
     });
   }
 }

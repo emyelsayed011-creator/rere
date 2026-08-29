@@ -26,10 +26,12 @@ public sealed class CreateModeratorCommandHandler : ICommandHandler<CreateModera
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _admin;
     private readonly IIdentityService _identity;
+    private readonly INotificationService _notify;
 
-    public CreateModeratorCommandHandler(IApplicationDbContext db, ICurrentUser admin, IIdentityService identity)
+    public CreateModeratorCommandHandler(IApplicationDbContext db, ICurrentUser admin,
+        IIdentityService identity, INotificationService notify)
     {
-        _db = db; _admin = admin; _identity = identity;
+        _db = db; _admin = admin; _identity = identity; _notify = notify;
     }
 
     public async Task<Result<ModeratorDto>> Handle(CreateModeratorCommand r, CancellationToken ct)
@@ -64,6 +66,12 @@ public sealed class CreateModeratorCommandHandler : ICommandHandler<CreateModera
             await _identity.AddToRoleAsync(r.UserId, "Moderator", ct);
 
         await _db.SaveChangesAsync(ct);
+
+        await _notify.NotifyAsync(r.UserId, NotificationType.Admin,
+            "تم تعيينك مشرفاً / You've been assigned as Moderator",
+            "تم منحك صلاحيات مشرف على المنصة. يمكنك الآن الوصول إلى لوحة الإدارة.",
+            "/admin", NotificationChannel.InApp | NotificationChannel.Email,
+            ct: ct);
 
         return new ModeratorDto(user.Id, user.Email!, user.DisplayName, user.AvatarUrl,
             r.Permissions, DateTime.UtcNow, true);

@@ -28,9 +28,10 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
       width: fit-content !important; height: auto !important; z-index: 2;
       display: inline-flex; align-items: center; line-height: 1.6;
     }
-    .status-pending { background: rgba(255,193,7,.9);  color: #000; }
-    .status-sold    { background: rgba(220,53,69,.9);   color: #fff; }
-    .status-rented  { background: rgba(108,117,125,.9); color: #fff; }
+    .status-pending  { background: rgba(255,193,7,.9);  color: #000; }
+    .status-sold     { background: rgba(220,53,69,.9);   color: #fff; }
+    .status-rented   { background: rgba(108,117,125,.9); color: #fff; }
+    .status-rejected { background: rgba(220,53,69,.95);  color: #fff; }
   `],
   template: `
     <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
@@ -191,6 +192,10 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
                 <span class="status-badge status-pending">
                   <i class="bi bi-clock-fill me-1"></i>{{ i18n.lang() === 'ar' ? 'قيد المراجعة' : 'Pending' }}
                 </span>
+              } @else if (l.status === 2) {
+                <span class="status-badge status-rejected">
+                  <i class="bi bi-x-circle-fill me-1"></i>{{ i18n.lang() === 'ar' ? 'مرفوض' : 'Rejected' }}
+                </span>
               } @else if (l.status === 3) {
                 <span class="status-badge status-sold">
                   <i class="bi bi-check-circle-fill me-1"></i>{{ i18n.lang() === 'ar' ? 'تم البيع' : 'Sold' }}
@@ -198,11 +203,6 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
               } @else if (l.status === 4) {
                 <span class="status-badge status-rented">
                   <i class="bi bi-check-circle-fill me-1"></i>{{ i18n.lang() === 'ar' ? 'تم التأجير' : 'Rented' }}
-                </span>
-              }
-              @if (mineMode() && l.status === 2) {
-                <span class="position-absolute top-0 end-0 m-2 badge bg-danger">
-                  {{ i18n.lang() === 'ar' ? 'مرفوض' : 'Rejected' }}
                 </span>
               }
               @if (l.status === ListingStatus.Sold || l.status === ListingStatus.Rented) {

@@ -36,25 +36,33 @@ import { TranslatePipe, I18nService } from '../../core/i18n.service';
                 <td>{{ u.createdAt | date:'short' }}</td>
                 <td>
                   @if (u.isBlocked) {
-                    <span class="badge bg-danger">{{ 'admin.blocked' | t }}</span>
+                    <span class="badge bg-danger"><i class="bi bi-ban me-1"></i>{{ 'admin.blocked' | t }}</span>
+                  } @else if (u.bannedUntil && isBanned(u.bannedUntil)) {
+                    <span class="badge bg-warning text-dark">
+                      <i class="bi bi-clock me-1"></i>
+                      {{ i18n.lang() === 'ar' ? 'موقوف حتى' : 'Suspended until' }}
+                      {{ u.bannedUntil | date:'short' }}
+                    </span>
                   } @else {
                     <span class="badge bg-success">{{ 'admin.active' | t }}</span>
                   }
                 </td>
                 <td class="text-end">
-                  <button class="btn btn-sm btn-outline-secondary me-1" (click)="openMessage(u)"
-                          [title]="'admin.messageUser' | t">
-                    <i class="bi bi-envelope"></i>
-                  </button>
-                  @if (!u.isBlocked) {
-                    <button class="btn btn-sm btn-outline-danger" (click)="openBan(u)">
-                      <i class="bi bi-ban me-1"></i>{{ 'admin.block' | t }}
+                  <div class="d-flex gap-2 justify-content-end">
+                    <button class="btn btn-sm btn-outline-secondary" (click)="openMessage(u)"
+                            [title]="'admin.messageUser' | t">
+                      <i class="bi bi-envelope"></i>
                     </button>
-                  } @else {
-                    <button class="btn btn-sm btn-outline-success" (click)="confirmUnban(u)">
-                      <i class="bi bi-check-circle me-1"></i>{{ 'admin.unblock' | t }}
-                    </button>
-                  }
+                    @if (!u.isBlocked && !(u.bannedUntil && isBanned(u.bannedUntil))) {
+                      <button class="btn btn-sm btn-outline-danger" (click)="openBan(u)">
+                        <i class="bi bi-ban me-1"></i>{{ 'admin.block' | t }}
+                      </button>
+                    } @else {
+                      <button class="btn btn-sm btn-outline-success" (click)="confirmUnban(u)">
+                        <i class="bi bi-check-circle me-1"></i>{{ 'admin.unblock' | t }}
+                      </button>
+                    }
+                  </div>
                 </td>
               </tr>
             }
@@ -77,8 +85,8 @@ import { TranslatePipe, I18nService } from '../../core/i18n.service';
 
     <!-- ── Ban confirmation modal ── -->
     @if (banTarget(); as u) {
-      <div class="modal-backdrop fade show" style="z-index:1040"></div>
-      <div class="modal d-block" tabindex="-1" style="z-index:1050">
+      <div class="modal-backdrop fade show" style="position:fixed;inset:0;z-index:1040"></div>
+      <div class="modal d-block" tabindex="-1" style="position:fixed;inset:0;z-index:1050">
         <div class="modal-dialog modal-dialog-centered">
           <div class="modal-content border-0 shadow-lg rounded-3">
             <div class="modal-header border-0 pb-0">
@@ -124,8 +132,8 @@ import { TranslatePipe, I18nService } from '../../core/i18n.service';
 
     <!-- ── Unban confirmation modal ── -->
     @if (unbanTarget(); as u) {
-      <div class="modal-backdrop fade show" style="z-index:1040"></div>
-      <div class="modal d-block" tabindex="-1" style="z-index:1050">
+      <div class="modal-backdrop fade show" style="position:fixed;inset:0;z-index:1040"></div>
+      <div class="modal d-block" tabindex="-1" style="position:fixed;inset:0;z-index:1050">
         <div class="modal-dialog modal-dialog-centered">
           <div class="modal-content border-0 shadow-lg rounded-3">
             <div class="modal-header border-0">
@@ -151,8 +159,8 @@ import { TranslatePipe, I18nService } from '../../core/i18n.service';
 
     <!-- ── Message modal ── -->
     @if (msgUser(); as u) {
-      <div class="modal-backdrop fade show" style="z-index:1040"></div>
-      <div class="modal d-block" tabindex="-1" style="z-index:1050">
+      <div class="modal-backdrop fade show" style="position:fixed;inset:0;z-index:1040"></div>
+      <div class="modal d-block" tabindex="-1" style="position:fixed;inset:0;z-index:1050">
         <div class="modal-dialog modal-dialog-centered">
           <div class="modal-content border-0 shadow-lg rounded-3">
             <div class="modal-header border-0">
@@ -180,8 +188,8 @@ import { TranslatePipe, I18nService } from '../../core/i18n.service';
     }
     <!-- ── Broadcast modal ── -->
     @if (broadcastOpen()) {
-      <div class="modal-backdrop fade show" style="z-index:1040"></div>
-      <div class="modal d-block" tabindex="-1" style="z-index:1050">
+      <div class="modal-backdrop fade show" style="position:fixed;inset:0;z-index:1040"></div>
+      <div class="modal d-block" tabindex="-1" style="position:fixed;inset:0;z-index:1050">
         <div class="modal-dialog modal-dialog-centered">
           <div class="modal-content border-0 shadow-lg rounded-3">
             <div class="modal-header border-0">
@@ -230,6 +238,11 @@ import { TranslatePipe, I18nService } from '../../core/i18n.service';
 export class AdminUsersComponent implements OnInit {
   private api = inject(ApiService);
   readonly i18n = inject(I18nService);
+
+  /** True if the date is in the future (ban not yet expired). */
+  isBanned(bannedUntil: string | Date): boolean {
+    return new Date(bannedUntil) > new Date();
+  }
 
   items = signal<any[]>([]);
   page = signal(1);
