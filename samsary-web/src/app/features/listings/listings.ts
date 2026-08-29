@@ -121,7 +121,8 @@ export class ListingsComponent implements OnInit {
     } else {
       this.api.categories().subscribe(c => this.categories.set(c));
       const qp = this.route.snapshot.queryParamMap;
-      const c = qp.get('category'); if (c) this.categoryId = +c;
+      const c = qp.get('categoryId'); if (c) this.categoryId = +c;
+      const q = qp.get('q'); if (q) this.q = q;
       this.reload();
     }
   }

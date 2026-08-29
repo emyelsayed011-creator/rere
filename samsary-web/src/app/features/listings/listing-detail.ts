@@ -1,11 +1,13 @@
-﻿import { Component, inject, OnInit, signal } from '@angular/core';
+﻿import { Component, ElementRef, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import * as L from 'leaflet';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
+import { ConfirmService } from '../../core/confirm.service';
 import { RealtimeService } from '../../core/realtime.service';
-import { Listing, MediaType } from '../../core/models';
+import { Listing, ListingStatus, MediaType } from '../../core/models';
 import { I18nService, TranslatePipe } from '../../core/i18n.service';
 
 @Component({
@@ -17,114 +19,278 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
       <div class="row g-4 animate-fade-up">
         <div class="col-lg-8">
           <div class="card border-0 shadow-sm overflow-hidden">
+            <!-- Media carousel -->
             @if (l.media.length) {
-              <div id="carousel" class="carousel slide" data-bs-ride="carousel">
+              <div id="listingCarousel" class="carousel slide" data-bs-ride="carousel">
                 <div class="carousel-inner">
                   @for (m of l.media; track m.id; let i = $index) {
                     <div class="carousel-item ratio ratio-16x9" [class.active]="i === 0">
                       @if (m.mediaType === MediaType.Image) {
                         <img [src]="m.url" class="object-fit-cover" alt="">
                       } @else {
-                        <video [src]="m.url" controls [poster]="m.thumbnailUrl || ''"></video>
+                        <video [src]="m.url" controls [poster]="m.thumbnailUrl || ''" class="w-100 h-100"></video>
                       }
                     </div>
                   }
                 </div>
                 @if (l.media.length > 1) {
-                  <button class="carousel-control-prev" type="button" data-bs-target="#carousel" data-bs-slide="prev">
+                  <button class="carousel-control-prev" type="button" data-bs-target="#listingCarousel" data-bs-slide="prev">
                     <span class="carousel-control-prev-icon"></span>
                   </button>
-                  <button class="carousel-control-next" type="button" data-bs-target="#carousel" data-bs-slide="next">
+                  <button class="carousel-control-next" type="button" data-bs-target="#listingCarousel" data-bs-slide="next">
                     <span class="carousel-control-next-icon"></span>
                   </button>
+                  <div class="carousel-indicators">
+                    @for (m of l.media; track m.id; let i = $index) {
+                      <button type="button" data-bs-target="#listingCarousel" [attr.data-bs-slide-to]="i"
+                              [class.active]="i===0"></button>
+                    }
+                  </div>
                 }
               </div>
             } @else {
               <div class="ratio ratio-16x9 d-flex align-items-center justify-content-center bg-light text-muted">
-                <i class="bi bi-image fs-1"></i>
+                <div class="text-center"><i class="bi bi-image fs-1 d-block mb-2"></i>
+                  <span class="small">{{ i18n.lang() === 'ar' ? 'لا توجد صور' : 'No images' }}</span>
+                </div>
               </div>
             }
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-start">
-                <div>
-                  <h3 class="mb-1">{{ l.title }}</h3>
-                  <div class="text-muted small">
-                    <i class="bi bi-tag"></i> {{ categoryName(l.category) }} ·
-                    <i class="bi bi-geo-alt"></i> {{ l.location || '—' }} ·
-                    {{ 'detail.posted' | t }} {{ l.createdAt | date:'medium' }}
+
+            <div class="card-body p-4">
+              <!-- Title + type badge -->
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="flex-grow-1">
+                  <h3 class="mb-1 fw-bold">{{ l.title }}</h3>
+                  <div class="text-muted small d-flex flex-wrap gap-2 align-items-center">
+                    <span><i class="bi bi-tag me-1"></i>{{ categoryName(l.category) }}</span>
+                    @if (l.location) {
+                      <span><i class="bi bi-geo-alt me-1"></i>{{ l.location }}</span>
+                    }
+                    <span><i class="bi bi-clock me-1"></i>{{ l.createdAt | date:'mediumDate' }}</span>
                   </div>
                 </div>
-                <span class="badge fs-6 text-white" [class.bg-success]="l.type===1" [class.bg-info]="l.type===2">
+                <span class="badge fs-6 ms-2 text-white" [class.bg-success]="l.type===1" [class.bg-info]="l.type===2">
                   {{ (l.type === 1 ? 'common.sale' : 'common.rent') | t }}
                 </span>
               </div>
-              <h4 class="text-primary fw-bold mt-3 mb-3">{{ l.price | number }} {{ l.currency }}</h4>
-              <p class="mb-0" style="white-space: pre-line;">{{ l.description }}</p>
+
+              <!-- Price row -->
+              <div class="d-flex align-items-center gap-3 mt-3 mb-3">
+                <h4 class="text-primary fw-bold mb-0">{{ l.price | number }} {{ l.currency }}</h4>
+                @if (l.isNegotiable) {
+                  <span class="badge bg-warning text-dark rounded-pill">
+                    <i class="bi bi-chat-left-dots me-1"></i>
+                    {{ i18n.lang() === 'ar' ? 'قابل للتفاوض' : 'Negotiable' }}
+                  </span>
+                }
+                @if (l.status === ListingStatus.Sold) {
+                  <span class="badge bg-danger rounded-pill">{{ i18n.lang() === 'ar' ? 'تم البيع' : 'Sold' }}</span>
+                }
+                @if (l.status === ListingStatus.Rented) {
+                  <span class="badge bg-secondary rounded-pill">{{ i18n.lang() === 'ar' ? 'تم التأجير' : 'Rented' }}</span>
+                }
+              </div>
+
+              <!-- Description -->
+              <h6 class="fw-semibold mt-3 mb-2">{{ i18n.lang() === 'ar' ? 'الوصف' : 'Description' }}</h6>
+              <p class="text-body-secondary" style="white-space: pre-line; line-height:1.7">{{ l.description }}</p>
+
+              <!-- Location map -->
+              @if (l.location) {
+                <div class="mt-4">
+                  <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h6 class="fw-semibold mb-0">
+                      <i class="bi bi-map me-1 text-primary"></i>
+                      {{ i18n.lang() === 'ar' ? 'الموقع' : 'Location' }}
+                    </h6>
+                    <div class="d-flex gap-2 align-items-center">
+                      @if (distance() != null) {
+                        <span class="badge bg-primary-subtle text-primary rounded-pill">
+                          <i class="bi bi-signpost-split me-1"></i>{{ distance() }}
+                        </span>
+                      }
+                      @if (mapCoords()) {
+                        <a [href]="googleMapsUrl()" target="_blank" rel="noopener"
+                           class="btn btn-sm btn-outline-success rounded-pill">
+                          <i class="bi bi-map-fill me-1"></i>
+                          {{ i18n.lang() === 'ar' ? 'فتح في جوجل ماب' : 'Open in Google Maps' }}
+                        </a>
+                      }
+                    </div>
+                  </div>
+                  <div #mapEl class="rounded-3 overflow-hidden border" style="height:220px"></div>
+                </div>
+              }
             </div>
           </div>
         </div>
 
+        <!-- Sidebar -->
         <div class="col-lg-4">
-          <div class="card border-0 shadow-sm">
-            <div class="card-body">
-              <h6 class="mb-3 fw-bold">{{ 'detail.seller' | t }}</h6>
-              <div class="d-flex align-items-center mb-3">
+          <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body p-4">
+              <!-- Owner -->
+              <h6 class="fw-bold mb-3">{{ 'detail.seller' | t }}</h6>
+              <a [routerLink]="['/users', l.ownerId]" class="d-flex align-items-center gap-2 mb-3 text-decoration-none text-body">
                 @if (l.ownerAvatarUrl) {
-                  <img [src]="l.ownerAvatarUrl" class="rounded-circle me-2" width="48" height="48" alt="">
+                  <img [src]="l.ownerAvatarUrl" class="rounded-circle border" width="48" height="48"
+                       style="object-fit:cover" alt="">
                 } @else {
-                  <i class="bi bi-person-circle fs-1 me-2 text-secondary"></i>
+                  <div class="rounded-circle bg-light d-flex align-items-center justify-content-center border"
+                       style="width:48px;height:48px">
+                    <i class="bi bi-person-fill text-secondary fs-4"></i>
+                  </div>
                 }
                 <div>
                   <div class="fw-semibold">{{ l.ownerDisplayName }}</div>
+                  <div class="small text-muted">
+                    {{ i18n.lang() === 'ar' ? 'عرض الملف الشخصي' : 'View profile' }}
+                    <i class="bi bi-arrow-right ms-1" style="font-size:.7rem"></i>
+                  </div>
                 </div>
-              </div>
+              </a>
 
+              <!-- Phone -->
+              @if (l.ownerPhone) {
+                <a [href]="'tel:' + l.ownerPhone" class="btn btn-outline-success w-100 mb-2">
+                  <i class="bi bi-telephone-fill me-2"></i>{{ l.ownerPhone }}
+                </a>
+                <a [href]="'https://wa.me/' + l.ownerPhone.replace(/[^0-9]/g,'') + '?text=' + whatsappMsg(l.title)"
+                   target="_blank" rel="noopener" class="btn btn-outline-success w-100 mb-2"
+                   style="border-color:#25d366;color:#25d366">
+                  <i class="bi bi-whatsapp me-2"></i>
+                  {{ i18n.lang() === 'ar' ? 'واتساب' : 'WhatsApp' }}
+                </a>
+              }
+
+              <!-- Message -->
               @if (auth.isAuthenticated() && auth.user()?.id !== l.ownerId) {
-                <textarea class="form-control mb-2" rows="3" [(ngModel)]="message" [placeholder]="'detail.writeMessage' | t"></textarea>
-                <button class="btn btn-samsary w-100" (click)="sendMessage(l.ownerId, l.id)" [disabled]="!message.trim() || sending()">
+                <textarea class="form-control mb-2" rows="3" [(ngModel)]="message"
+                          [placeholder]="'detail.writeMessage' | t"></textarea>
+                <button class="btn btn-samsary w-100" (click)="sendMessage(l.ownerId, l.id)"
+                        [disabled]="!message.trim() || sending()">
                   @if (sending()) { <span class="spinner-border spinner-border-sm me-2"></span> }
                   <i class="bi bi-chat-dots me-1"></i> {{ 'detail.contactSeller' | t }}
                 </button>
               } @else if (!auth.isAuthenticated()) {
-                <a routerLink="/login" class="btn btn-outline-primary w-100">{{ 'detail.signInToContact' | t }}</a>
-              }
-
-              @if (auth.user()?.id === l.ownerId) {
-                <a [routerLink]="['/listings', l.id, 'edit']" class="btn btn-outline-primary w-100 mb-2">
-                  <i class="bi bi-pencil"></i> {{ 'common.edit' | t }}
+                <a routerLink="/login" class="btn btn-outline-primary w-100">
+                  {{ 'detail.signInToContact' | t }}
                 </a>
-                <button class="btn btn-outline-danger w-100" (click)="remove(l.id)">
-                  <i class="bi bi-trash"></i> {{ 'common.delete' | t }}
-                </button>
               }
             </div>
           </div>
+
+          <!-- Owner actions -->
+          @if (auth.user()?.id === l.ownerId) {
+            <div class="card border-0 shadow-sm">
+              <div class="card-body p-3">
+                <a [routerLink]="['/listings', l.id, 'edit']" class="btn btn-outline-primary w-100 mb-2">
+                  <i class="bi bi-pencil me-1"></i> {{ 'common.edit' | t }}
+                </a>
+                <button class="btn btn-outline-danger w-100" (click)="remove(l.id)">
+                  <i class="bi bi-trash me-1"></i> {{ 'common.delete' | t }}
+                </button>
+              </div>
+            </div>
+          }
         </div>
       </div>
-    } @else { <div class="text-center text-muted py-5"><div class="spinner-border"></div></div> }
+    } @else {
+      <div class="text-center text-muted py-5"><div class="spinner-border"></div></div>
+    }
   `
 })
-export class ListingDetailComponent implements OnInit {
+export class ListingDetailComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private rt = inject(RealtimeService);
-  private i18n = inject(I18nService);
+  readonly i18n = inject(I18nService);
+  private confirm = inject(ConfirmService);
   auth = inject(AuthService);
+
+  @ViewChild('mapEl') mapEl?: ElementRef<HTMLDivElement>;
 
   l = signal<Listing | null>(null);
   message = '';
   sending = signal(false);
+  mapCoords = signal<[number, number] | null>(null);
+  distance = signal<string | null>(null);
   MediaType = MediaType;
+  ListingStatus = ListingStatus;
 
-  categoryName(category: Listing['category']) {
-    return this.i18n.lang() === 'ar' ? (category.nameAr?.trim() || category.name) : category.name;
+  private map?: L.Map;
+
+  categoryName(c: Listing['category']) {
+    return this.i18n.lang() === 'ar' ? (c.nameAr?.trim() || c.name) : c.name;
+  }
+
+  googleMapsUrl() {
+    const c = this.mapCoords();
+    if (!c) return '#';
+    return `https://www.google.com/maps/dir/?api=1&destination=${c[0]},${c[1]}`;
+  }
+
+  whatsappMsg(title: string) {
+    return encodeURIComponent(`Hi, I'm interested in your listing: ${title}`);
   }
 
   ngOnInit() {
     const id = +this.route.snapshot.paramMap.get('id')!;
-    this.api.listing(id).subscribe(x => this.l.set(x));
+    this.api.listing(id).subscribe(x => {
+      this.l.set(x);
+      if (x.location) setTimeout(() => this.initMap(x.location!), 100);
+    });
   }
+
+  private parseCoords(loc: string): [number, number] | null {
+    const parts = loc.split(',').map(s => parseFloat(s.trim()));
+    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])
+        && Math.abs(parts[0]) <= 90 && Math.abs(parts[1]) <= 180)
+      return [parts[0], parts[1]];
+    return null;
+  }
+
+  private async initMap(location: string) {
+    let coords = this.parseCoords(location);
+    if (!coords) {
+      try {
+        const lang = this.i18n.lang();
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1&accept-language=${lang}`);
+        const data = await r.json();
+        if (data?.[0]) coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+      } catch { /* ignore */ }
+    }
+    if (!coords || !this.mapEl?.nativeElement) return;
+    this.mapCoords.set(coords);
+
+    this.map = L.map(this.mapEl.nativeElement, { zoomControl: true, scrollWheelZoom: false })
+      .setView(coords, 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(this.map);
+    L.marker(coords, {
+      icon: L.divIcon({ className: 'custom-map-pin', iconSize: [18, 18], iconAnchor: [9, 18], html: '<span></span>' })
+    }).addTo(this.map);
+
+    // Try to calculate distance to user
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        const d = this.haversine(pos.coords.latitude, pos.coords.longitude, coords![0], coords![1]);
+        this.distance.set(d < 1 ? `${Math.round(d * 1000)} m` : `${d.toFixed(1)} km`);
+      }, () => { /* permission denied */ });
+    }
+  }
+
+  private haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  ngOnDestroy() { this.map?.remove(); }
 
   async sendMessage(receiverId: string, listingId: number) {
     if (!this.message.trim()) return;
@@ -136,8 +302,14 @@ export class ListingDetailComponent implements OnInit {
     } finally { this.sending.set(false); }
   }
 
-  remove(id: number) {
-    if (!confirm(this.i18n.t('detail.confirmDelete'))) return;
+  async remove(id: number) {
+    const ok = await this.confirm.confirm({
+      title: this.i18n.lang() === 'ar' ? 'حذف الإعلان' : 'Delete Listing',
+      message: this.i18n.lang() === 'ar' ? 'هل أنت متأكد من حذف هذا الإعلان؟ لن تتمكن من استعادته.' : 'Are you sure you want to delete this listing? This cannot be undone.',
+      danger: true,
+      confirmLabel: this.i18n.lang() === 'ar' ? 'حذف' : 'Delete'
+    });
+    if (!ok) return;
     this.api.deleteListing(id).subscribe(() => this.router.navigateByUrl('/my-listings'));
   }
 }

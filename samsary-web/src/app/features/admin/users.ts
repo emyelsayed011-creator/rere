@@ -9,7 +9,13 @@ import { TranslatePipe, I18nService } from '../../core/i18n.service';
   standalone: true,
   imports: [DatePipe, FormsModule, TranslatePipe],
   template: `
-    <h4 class="mb-3 fw-bold">{{ 'admin.users' | t }}</h4>
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h4 class="mb-0 fw-bold">{{ 'admin.users' | t }}</h4>
+      <button class="btn btn-samsary btn-sm" (click)="broadcastOpen.set(true)">
+        <i class="bi bi-megaphone me-1"></i>
+        {{ i18n.lang() === 'ar' ? 'إشعار للجميع' : 'Broadcast' }}
+      </button>
+    </div>
     <div class="card border-0 shadow-sm">
       <div class="table-responsive">
         <table class="table mb-0 align-middle">
@@ -172,11 +178,58 @@ import { TranslatePipe, I18nService } from '../../core/i18n.service';
         </div>
       </div>
     }
+    <!-- ── Broadcast modal ── -->
+    @if (broadcastOpen()) {
+      <div class="modal-backdrop fade show" style="z-index:1040"></div>
+      <div class="modal d-block" tabindex="-1" style="z-index:1050">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content border-0 shadow-lg rounded-3">
+            <div class="modal-header border-0">
+              <h5 class="modal-title fw-bold">
+                <i class="bi bi-megaphone-fill me-2 text-primary"></i>
+                {{ i18n.lang() === 'ar' ? 'إشعار للجميع' : 'Broadcast Notification' }}
+              </h5>
+              <button class="btn-close" (click)="broadcastOpen.set(false)"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label fw-medium small">{{ i18n.lang() === 'ar' ? 'العنوان' : 'Title' }}</label>
+                <input class="form-control" [(ngModel)]="broadcastTitle" maxlength="120">
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-medium small">{{ i18n.lang() === 'ar' ? 'الرسالة' : 'Message' }}</label>
+                <textarea class="form-control" rows="4" [(ngModel)]="broadcastMsg"></textarea>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="bcastEmail" [(ngModel)]="broadcastEmail">
+                <label class="form-check-label small" for="bcastEmail">
+                  <i class="bi bi-envelope me-1"></i>
+                  {{ i18n.lang() === 'ar' ? 'أرسل بريد إلكتروني أيضاً' : 'Also send email' }}
+                </label>
+              </div>
+              @if (broadcastFeedback()) {
+                <div class="small mt-2" [class.text-success]="broadcastOk()" [class.text-danger]="!broadcastOk()">
+                  {{ broadcastFeedback() }}
+                </div>
+              }
+            </div>
+            <div class="modal-footer border-0">
+              <button class="btn btn-light" (click)="broadcastOpen.set(false)">{{ 'common.cancel' | t }}</button>
+              <button class="btn btn-samsary" (click)="sendBroadcast()"
+                      [disabled]="!broadcastTitle.trim() || !broadcastMsg.trim() || actionLoading()">
+                @if (actionLoading()) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                <i class="bi bi-send me-1"></i>{{ i18n.lang() === 'ar' ? 'إرسال للجميع' : 'Send to all' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
   `
 })
 export class AdminUsersComponent implements OnInit {
   private api = inject(ApiService);
-  private i18n = inject(I18nService);
+  readonly i18n = inject(I18nService);
 
   items = signal<any[]>([]);
   page = signal(1);
@@ -237,6 +290,28 @@ export class AdminUsersComponent implements OnInit {
         setTimeout(() => this.msgUser.set(null), 800);
       },
       error: () => { this.msgOk.set(false); this.msgFeedback.set(this.i18n.t('common.failed')); }
+    });
+  }
+
+  // Broadcast
+  broadcastOpen = signal(false);
+  broadcastTitle = '';
+  broadcastMsg = '';
+  broadcastEmail = false;
+  broadcastFeedback = signal<string | null>(null);
+  broadcastOk = signal(true);
+
+  sendBroadcast() {
+    if (!this.broadcastTitle.trim() || !this.broadcastMsg.trim()) return;
+    this.actionLoading.set(true);
+    this.api.adminBroadcast(this.broadcastTitle.trim(), this.broadcastMsg.trim(), this.broadcastEmail).subscribe({
+      next: () => {
+        this.actionLoading.set(false);
+        this.broadcastOk.set(true);
+        this.broadcastFeedback.set(this.i18n.lang() === 'ar' ? 'تم الإرسال بنجاح' : 'Sent successfully!');
+        setTimeout(() => { this.broadcastOpen.set(false); this.broadcastFeedback.set(null); }, 1500);
+      },
+      error: () => { this.actionLoading.set(false); this.broadcastOk.set(false); this.broadcastFeedback.set(this.i18n.t('common.failed')); }
     });
   }
 }

@@ -1,6 +1,7 @@
 ﻿import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { TranslatePipe } from '../../core/i18n.service';
 
@@ -98,10 +99,13 @@ import { TranslatePipe } from '../../core/i18n.service';
 export class RegisterComponent {
   private fb = inject(FormBuilder);
   private auth = inject(AuthService);
+  private api = inject(ApiService);
   private router = inject(Router);
   loading = signal(false);
   errors = signal<string[]>([]);
   showPw = signal(false);
+
+  private detectedCountry: string | null = null;
 
   form = this.fb.nonNullable.group({
     displayName: ['', [Validators.required, Validators.maxLength(80)]],
@@ -110,12 +114,29 @@ export class RegisterComponent {
     password: ['', [Validators.required, Validators.minLength(8)]]
   });
 
+  constructor() {
+    // Silently detect location — result is used after successful registration
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        const { latitude, longitude } = pos.coords;
+        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`)
+          .then(r => r.json())
+          .then(d => { this.detectedCountry = d?.address?.country_code?.toUpperCase() ?? null; })
+          .catch(() => { /* ignore */ });
+      }, () => { /* permission denied — no-op */ });
+    }
+  }
+
   async submit() {
     if (this.form.invalid) return;
     this.loading.set(true); this.errors.set([]);
     try {
       const v = this.form.getRawValue();
       await this.auth.register(v.email, v.password, v.displayName, v.phone);
+      // Save detected country silently after successful registration
+      if (this.detectedCountry) {
+        this.api.updateProfile({ displayName: v.displayName, country: this.detectedCountry }).subscribe();
+      }
       this.router.navigateByUrl('/');
     } catch (e: any) {
       const raw = e?.error?.errors;

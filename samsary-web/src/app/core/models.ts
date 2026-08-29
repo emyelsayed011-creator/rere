@@ -41,6 +41,7 @@ export interface AuthUser {
   dateOfBirth?: string;
   gender?: string;
   country?: string;
+  emailConfirmed: boolean;
   /** Bitmask of ModeratorPermission — present only for Moderator role users. */
   modPermissions?: number;
 }
@@ -59,12 +60,23 @@ export interface Listing {
   price: number; currency: string;
   type: ListingType; status: ListingStatus;
   location?: string; rejectionReason?: string;
+  isNegotiable: boolean;
+  ownerPhone?: string;
   category: Category;
   ownerId: string; ownerDisplayName: string; ownerAvatarUrl?: string;
   createdAt: string; media: Media[];
 }
 
 export interface PagedListings { total: number; page: number; pageSize: number; items: Listing[]; }
+
+export interface PublicUser {
+  id: string;
+  displayName: string;
+  avatarUrl?: string;
+  bio?: string;
+  approvedListingsCount: number;
+  memberSince?: string;
+}
 
 export interface Review {
   id: number; listingId: number;

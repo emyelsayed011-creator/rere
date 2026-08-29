@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import {
   Advertisement, AuthUser, BanRecord, Category, ChatMessage, Conversation, Listing, ListingType,
-  Moderator, ModeratorPermission, NotificationItem, PagedListings, PagedReviews, Review, ReviewSummary
+  Moderator, ModeratorPermission, NotificationItem, PagedListings, PagedReviews, PublicUser, Review, ReviewSummary
 } from './models';
 
 @Injectable({ providedIn: 'root' })
@@ -15,11 +15,12 @@ export class ApiService {
   categories() { return this.http.get<Category[]>(`${this.base}/categories`); }
 
   // listings
-  listings(opts: { q?: string; categoryId?: number; type?: ListingType; page?: number; pageSize?: number; } = {}) {
+  listings(opts: { q?: string; categoryId?: number; type?: ListingType; page?: number; pageSize?: number; ownerId?: string; } = {}) {
     let p = new HttpParams();
     if (opts.q) p = p.set('q', opts.q);
     if (opts.categoryId != null) p = p.set('categoryId', opts.categoryId);
     if (opts.type != null) p = p.set('type', opts.type);
+    if (opts.ownerId) p = p.set('ownerId', opts.ownerId);
     p = p.set('page', opts.page ?? 1).set('pageSize', opts.pageSize ?? 12);
     return this.http.get<PagedListings>(`${this.base}/listings`, { params: p });
   }
@@ -42,6 +43,7 @@ export class ApiService {
 
   // profile
   me() { return this.http.get<AuthUser>(`${this.base}/users/me`); }
+  publicUser(id: string) { return this.http.get<PublicUser>(`${this.base}/users/${id}`); }
   updateProfile(body: any) { return this.http.put<AuthUser>(`${this.base}/users/me`, body); }
   changePassword(body: any) { return this.http.post<void>(`${this.base}/users/me/change-password`, body); }
   uploadAvatar(file: File) {
@@ -73,6 +75,9 @@ export class ApiService {
   }
   confirmEmail(userId: string, token: string) {
     return this.http.post<void>(`${this.base}/auth/confirm-email`, { userId, token });
+  }
+  resendVerificationEmail() {
+    return this.http.post<void>(`${this.base}/auth/send-email-verification`, {});
   }
 
   // reviews
@@ -127,6 +132,9 @@ export class ApiService {
   }
   adminMessage(id: string, body: string) {
     return this.http.post<void>(`${this.base}/admin/users/${id}/message`, { receiverId: id, body });
+  }
+  adminBroadcast(title: string, message: string, sendEmail: boolean) {
+    return this.http.post<void>(`${this.base}/admin/broadcast`, { title, message, sendEmail });
   }
   adminLogs(page = 1, level?: string) {
     let p = new HttpParams().set('page', page);

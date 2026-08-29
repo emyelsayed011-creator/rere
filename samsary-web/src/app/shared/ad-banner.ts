@@ -72,6 +72,13 @@ import { TranslatePipe } from '../core/i18n.service';
           </div>
         }
       </div>
+    } @else if (loaded()) {
+      <!-- Empty state: no active ads -->
+      <a class="ad-placeholder" href="/contact" rel="noopener">
+        <i class="bi bi-megaphone"></i>
+        <span>{{ 'ad.advertiseWithUs' | t }}</span>
+        <span class="ad-placeholder-cta">{{ 'ad.learnMore' | t }} →</span>
+      </a>
     }
   `,
   styles: [`
@@ -147,6 +154,19 @@ import { TranslatePipe } from '../core/i18n.service';
       transition: background .25s ease, transform .25s ease;
     }
     .ad-dot.active { background: #ec4899; transform: scale(1.3); }
+    /* Empty / placeholder state */
+    .ad-placeholder {
+      display: flex; align-items: center; justify-content: center; gap: .75rem;
+      min-height: 60px; border-radius: 1rem;
+      border: 2px dashed rgba(236,72,153,.3);
+      background: rgba(236,72,153,.04); color: rgba(236,72,153,.7);
+      text-decoration: none; font-size: .85rem; font-weight: 600;
+      padding: .75rem 1.25rem; margin-bottom: 1.5rem;
+      transition: all .2s;
+    }
+    .ad-placeholder:hover { border-color: #ec4899; color: #ec4899; background: rgba(236,72,153,.08); }
+    .ad-placeholder .bi { font-size: 1.2rem; }
+    .ad-placeholder-cta { font-size: .75rem; opacity: .8; margin-inline-start: auto; }
   `]
 })
 export class AdBannerComponent implements OnInit, OnDestroy {
@@ -154,6 +174,7 @@ export class AdBannerComponent implements OnInit, OnDestroy {
 
   private api = inject(ApiService);
   ads = signal<Advertisement[]>([]);
+  loaded = signal(false);
   activeIndex = signal(0);
   private timer: any;
 
@@ -162,6 +183,7 @@ export class AdBannerComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.api.activeAds(this.placement).subscribe(list => {
       this.ads.set(list);
+      this.loaded.set(true);
       if (list.length > 1) {
         this.timer = setInterval(() => {
           this.activeIndex.update(i => (i + 1) % this.ads().length);

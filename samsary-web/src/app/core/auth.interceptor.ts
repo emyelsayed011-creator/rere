@@ -9,16 +9,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
   const token = auth.token();
 
-  // Always add Authorization header if token exists
   let authed = req;
   if (token) {
-    authed = req.clone({ 
-      setHeaders: { 
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      withCredentials: true
-    });
+    // Never force Content-Type for FormData — browser must set multipart boundary automatically
+    const isFormData = req.body instanceof FormData;
+    const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+    if (!isFormData) headers['Content-Type'] = 'application/json';
+    authed = req.clone({ setHeaders: headers, withCredentials: true });
   }
 
   return next(authed).pipe(

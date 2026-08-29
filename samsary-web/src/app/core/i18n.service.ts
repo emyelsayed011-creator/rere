@@ -275,6 +275,16 @@ const EN: Dict = {
   // Admin moderators - new user
   'admin.modPickExisting': 'Pick existing user',
   'admin.modCreateNew': 'Create new account',
+
+  // Ads
+  'ad.sponsored': 'Sponsored',
+  'ad.featuredListing': 'Featured',
+  'ad.viewListing': 'View listing',
+  'ad.learnMore': 'Learn more',
+  'ad.advertiseWithUs': 'Advertise your listing here',
+
+  // Upload
+  'form.uploadAll': 'Upload images',
 };
 
 const AR: Dict = {
@@ -547,6 +557,16 @@ const AR: Dict = {
   // Admin moderators - new user
   'admin.modPickExisting': 'اختر مستخدماً',
   'admin.modCreateNew': 'إنشاء حساب جديد',
+
+  // Ads
+  'ad.sponsored': 'إعلان ممول',
+  'ad.featuredListing': 'إعلان مميز',
+  'ad.viewListing': 'عرض الإعلان',
+  'ad.learnMore': 'اعرف أكثر',
+  'ad.advertiseWithUs': 'أعلن معنا هنا',
+
+  // Upload
+  'form.uploadAll': 'رفع الصور',
 };
 
 const DICTS: Record<Lang, Dict> = { en: EN, ar: AR };

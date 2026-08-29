@@ -18,6 +18,7 @@ export const routes: Routes = [
   { path: 'confirm-email', loadComponent: () => import('./features/auth/confirm-email').then(m => m.ConfirmEmailComponent) },
 
   { path: 'profile', canActivate: [authGuard], loadComponent: () => import('./features/profile').then(m => m.ProfileComponent) },
+  { path: 'users/:id', loadComponent: () => import('./features/user-profile').then(m => m.UserProfileComponent) },
   { path: 'my-listings', canActivate: [authGuard], loadComponent: () => import('./features/listings/listings').then(m => m.ListingsComponent), data: { mine: true } },
   { path: 'notifications', canActivate: [authGuard], loadComponent: () => import('./features/notifications').then(m => m.NotificationsComponent) },
   { path: 'chat', canActivate: [authGuard], loadComponent: () => import('./features/chat').then(m => m.ChatComponent) },

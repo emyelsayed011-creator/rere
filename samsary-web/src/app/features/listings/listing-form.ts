@@ -4,8 +4,9 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import * as L from 'leaflet';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
+import { ConfirmService } from '../../core/confirm.service';
 import { I18nService, TranslatePipe } from '../../core/i18n.service';
-import { Category, Listing, ListingType } from '../../core/models';
+import { Category, Listing, ListingStatus, ListingType } from '../../core/models';
 
 const CURRENCIES = [
   { code: 'EGP', label: 'EGP' },
@@ -27,6 +28,21 @@ const WIZARD_STEPS = [
   standalone: true,
   imports: [ReactiveFormsModule, TranslatePipe, RouterLink],
   template: `
+    <!-- Email verification warning -->
+    @if (auth.isAuthenticated() && auth.user()?.emailConfirmed === false) {
+      <div class="alert alert-warning d-flex align-items-center gap-2 mb-3 py-2">
+        <i class="bi bi-envelope-exclamation-fill fs-5"></i>
+        <div class="flex-grow-1 small">
+          {{ i18n.lang() === 'ar' ? 'بريدك الإلكتروني لم يتم التحقق منه بعد. يرجى تأكيد بريدك لتتمكن من نشر إعلانات.' : 'Your email is not verified yet. Please confirm your email to post listings.' }}
+        </div>
+        <button class="btn btn-warning btn-sm" (click)="resendVerification()" [disabled]="resendingVerification()">
+          @if (resendingVerification()) { <span class="spinner-border spinner-border-sm"></span> }
+          @else { <i class="bi bi-send me-1"></i> }
+          {{ i18n.lang() === 'ar' ? 'إعادة إرسال' : 'Resend' }}
+        </button>
+      </div>
+    }
+
     <h4 class="mb-4 fw-bold">{{ (editing() ? 'form.editTitle' : 'form.newTitle') | t }}</h4>
 
     <!-- Wizard step bar (new listing only) -->
@@ -93,6 +109,26 @@ const WIZARD_STEPS = [
                     <option [ngValue]="2">{{ 'common.rentShort' | t }}</option>
                   </select>
                 </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-medium">
+                    {{ i18n.lang() === 'ar' ? 'حالة الإعلان' : 'Listing Status' }}
+                  </label>
+                  <select class="form-select" formControlName="status">
+                    <option [ngValue]="1">
+                      {{ i18n.lang() === 'ar' ? 'متاح' : 'Available' }}
+                    </option>
+                    <option [ngValue]="3">
+                      {{ i18n.lang() === 'ar' ? 'تم البيع' : 'Sold' }}
+                    </option>
+                    <option [ngValue]="4">
+                      {{ i18n.lang() === 'ar' ? 'تم التأجير' : 'Rented' }}
+                    </option>
+                  </select>
+                  <div class="form-text">
+                    <i class="bi bi-info-circle me-1"></i>
+                    {{ i18n.lang() === 'ar' ? 'حدد إذا كان الإعلان لا يزال متاحاً أو تم البيع/التأجير' : 'Mark if sold/rented to hide from search results' }}
+                  </div>
+                </div>
               }
             </div>
           }
@@ -107,7 +143,12 @@ const WIZARD_STEPS = [
               </div>
               <div class="col-md-5">
                 <label class="form-label fw-medium">{{ 'form.price' | t }}</label>
-                <input class="form-control" type="number" formControlName="price" min="0">
+                <input class="form-control" type="number" formControlName="price" min="1">
+                @if (form.controls.price.invalid && form.controls.price.touched) {
+                  <div class="invalid-feedback d-block">
+                    {{ i18n.lang() === 'ar' ? 'السعر يجب أن يكون أكبر من 0' : 'Price must be greater than 0' }}
+                  </div>
+                }
                 @if (fieldError('price')) { <div class="invalid-feedback d-block">{{ fieldError('price') }}</div> }
               </div>
               <div class="col-md-3">
@@ -115,6 +156,15 @@ const WIZARD_STEPS = [
                 <select class="form-select" formControlName="currency">
                   @for (c of currencies; track c.code) { <option [value]="c.code">{{ c.code }}</option> }
                 </select>
+              </div>
+              <div class="col-md-4 d-flex align-items-end pb-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="isNegotiable" formControlName="isNegotiable">
+                  <label class="form-check-label fw-medium" for="isNegotiable">
+                    <i class="bi bi-chat-left-dots me-1 text-primary"></i>
+                    {{ i18n.lang() === 'ar' ? 'السعر قابل للتفاوض' : 'Negotiable price' }}
+                  </label>
+                </div>
               </div>
               <div class="col-12">
                 <label class="form-label fw-medium">{{ 'form.description' | t }}</label>
@@ -229,9 +279,48 @@ const WIZARD_STEPS = [
                 <i class="bi bi-images me-1 text-primary"></i>{{ 'form.addImages' | t }}
                 <span class="text-muted fw-normal small ms-1">({{ 'form.optional' | t }})</span>
               </label>
-              <input type="file" class="form-control" accept="image/*" multiple
-                     (change)="uploadImages($event, listing.id)">
-              <div class="form-text">{{ 'form.multiImageHint' | t }}</div>
+              <!-- Drag & Drop Zone -->
+              <div class="dropzone" [class.dropzone--over]="dragging()"
+                   (dragover)="$event.preventDefault(); dragging.set(true)"
+                   (dragleave)="dragging.set(false)"
+                   (drop)="onDrop($event)"
+                   (click)="imgInput.click()" role="button" tabindex="0"
+                   (keydown.enter)="imgInput.click()">
+                <i class="bi bi-cloud-upload fs-2 text-primary mb-1"></i>
+                <div class="fw-semibold small">
+                  {{ i18n.lang() === 'ar' ? 'اسحب الصور هنا أو اضغط للاختيار' : 'Drag images here or click to select' }}
+                </div>
+                <div class="text-muted" style="font-size:.75rem">JPG, PNG, WEBP</div>
+                <input #imgInput type="file" accept="image/*" multiple hidden (change)="onFileSelected($event)">
+              </div>
+              <!-- Pending file preview cards -->
+              @if (pendingFiles().length > 0) {
+                <div class="row g-2 mt-2">
+                  @for (f of pendingFiles(); track f.name; let i = $index) {
+                    <div class="col-6 col-sm-4">
+                      <div class="media-thumb">
+                        <img [src]="previewUrl(f)" class="media-thumb__img" alt="">
+                        <button class="media-thumb__del" (click)="removePending(i)" type="button">
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <div class="media-thumb__name">{{ f.name }}</div>
+                      </div>
+                    </div>
+                  }
+                </div>
+                <div class="d-flex gap-2 mt-2">
+                  <button type="button" class="btn btn-samsary btn-sm"
+                          (click)="uploadPending(listing.id)" [disabled]="uploadingImgs()">
+                    @if (uploadingImgs()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                    @else { <i class="bi bi-cloud-upload me-1"></i> }
+                    {{ i18n.lang() === 'ar' ? 'رفع الصور' : 'Upload' }} ({{ pendingFiles().length }})
+                  </button>
+                  <button type="button" class="btn btn-light btn-sm"
+                          (click)="clearPending()" [disabled]="uploadingImgs()">
+                    {{ 'common.cancel' | t }}
+                  </button>
+                </div>
+              }
               @if (uploadingImgs()) {
                 <div class="progress mt-2" style="height:4px">
                   <div class="progress-bar progress-bar-striped progress-bar-animated" style="width:100%"></div>
@@ -271,7 +360,7 @@ const WIZARD_STEPS = [
                       <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 rounded-circle d-flex align-items-center justify-content-center"
                               style="width:26px;height:26px;padding:0"
                               (click)="removeMedia(listing.id, m.id)" type="button" [title]="'common.delete' | t">
-                        <i class="bi bi-x" style="font-size:.8rem"></i>
+                        <i class="bi bi-trash" style="font-size:.8rem"></i>
                       </button>
                       @if (m.mediaType === 2) {
                         <a [href]="m.url" target="_blank" rel="noopener"
@@ -339,6 +428,34 @@ const WIZARD_STEPS = [
     .loc-btn-primary:hover:not(:disabled) { background: var(--samsary-primary); color: #fff; }
     .loc-btn-secondary { border-color: #ced4da; color: #495057; }
     .loc-btn-secondary:hover:not(:disabled) { background: #f8f9fa; border-color: #adb5bd; }
+    /* Drag & drop zone */
+    .dropzone {
+      border: 2px dashed #ced4da; border-radius: .75rem;
+      background: #f8f9fa; padding: 1.5rem 1rem;
+      text-align: center; cursor: pointer; transition: all .2s;
+      display: flex; flex-direction: column; align-items: center; gap: .25rem;
+    }
+    .dropzone:hover, .dropzone--over {
+      border-color: var(--samsary-primary);
+      background: rgba(var(--samsary-primary-rgb), .05);
+    }
+    /* Media thumbnail card */
+    .media-thumb {
+      position: relative; border-radius: .5rem; overflow: hidden;
+      border: 1px solid #dee2e6; aspect-ratio: 4/3; background: #f0f0f0;
+    }
+    .media-thumb__img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .media-thumb__del {
+      position: absolute; top: 4px; inset-inline-end: 4px;
+      width: 22px; height: 22px; border-radius: 50%; padding: 0;
+      background: rgba(220,53,69,.85); color: #fff; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: .7rem;
+    }
+    .media-thumb__name {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: rgba(0,0,0,.5); color: #fff; font-size: .65rem;
+      padding: 2px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
     @media (max-width: 576px) {
       .wiz-label { display: none; }
       .wiz-line { margin: 0 .4rem; }
@@ -351,6 +468,7 @@ export class ListingFormComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private confirm = inject(ConfirmService);
   readonly i18n = inject(I18nService);
   readonly auth = inject(AuthService);
 
@@ -364,6 +482,9 @@ export class ListingFormComponent implements OnInit, OnDestroy {
   locating = signal(false);
   uploadingVid = signal(false);
   uploadingImgs = signal(false);
+  dragging = signal(false);
+  pendingFiles = signal<File[]>([]);
+  resendingVerification = signal(false);
   error = signal<string | null>(null);
   mediaError = signal<string | null>(null);
   editing = signal(false);
@@ -374,15 +495,18 @@ export class ListingFormComponent implements OnInit, OnDestroy {
 
   private map?: L.Map;
   private marker?: L.Marker;
+  private objectUrls: string[] = [];
 
   form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.maxLength(200)]],
     description: ['', [Validators.required, Validators.maxLength(4000)]],
-    price: [0, [Validators.required, Validators.min(0)]],
+    price: [0, [Validators.required, Validators.min(1)]],
     currency: ['EGP', [Validators.required]],
     type: [ListingType.Sell, [Validators.required]],
     categoryId: [0 as number, [Validators.required]],
-    location: ['', [Validators.required]]
+    location: ['', [Validators.required]],
+    isNegotiable: [false],
+    status: [ListingStatus.Approved as ListingStatus]
   });
 
   fieldError(field: string): string | null {
@@ -443,7 +567,9 @@ export class ListingFormComponent implements OnInit, OnDestroy {
         this.form.patchValue({
           title: l.title, description: l.description, price: l.price,
           currency: l.currency, type: l.type, categoryId: l.category.id,
-          location: l.location || ''
+          location: l.location || '', isNegotiable: l.isNegotiable,
+          status: (l.status === ListingStatus.Sold || l.status === ListingStatus.Rented)
+            ? l.status : ListingStatus.Approved
         });
         this.created.set(l);
         // In edit mode all steps render together, so map is available
@@ -501,7 +627,68 @@ export class ListingFormComponent implements OnInit, OnDestroy {
     return parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1]) ? [parts[0], parts[1]] : null;
   }
 
-  ngOnDestroy() { this.map?.remove(); }
+  ngOnDestroy() {
+    this.map?.remove();
+    this.objectUrls.forEach(u => URL.revokeObjectURL(u));
+  }
+
+  // ── Drag & Drop ────────────────────────────────────────────────────────
+  onDrop(ev: DragEvent) {
+    ev.preventDefault();
+    this.dragging.set(false);
+    const files = Array.from(ev.dataTransfer?.files ?? []).filter(f => f.type.startsWith('image/'));
+    if (files.length) this.pendingFiles.update(p => [...p, ...files]);
+  }
+
+  onFileSelected(ev: Event) {
+    const files = Array.from((ev.target as HTMLInputElement).files ?? []);
+    if (files.length) this.pendingFiles.update(p => [...p, ...files]);
+    (ev.target as HTMLInputElement).value = '';
+  }
+
+  previewUrl(file: File): string {
+    const url = URL.createObjectURL(file);
+    this.objectUrls.push(url);
+    return url;
+  }
+
+  removePending(index: number) {
+    this.pendingFiles.update(p => p.filter((_, i) => i !== index));
+  }
+
+  clearPending() { this.pendingFiles.set([]); }
+
+  uploadPending(id: number) {
+    const files = this.pendingFiles();
+    if (!files.length) return;
+    this.mediaError.set(null);
+    this.uploadingImgs.set(true);
+    const upload = (index: number) => {
+      if (index >= files.length) {
+        this.uploadingImgs.set(false);
+        this.pendingFiles.set([]);
+        this.refresh(id);
+        return;
+      }
+      this.api.uploadImage(id, files[index]).subscribe({
+        next: () => upload(index + 1),
+        error: e => {
+          this.uploadingImgs.set(false);
+          this.mediaError.set(e?.error?.detail || this.i18n.t('form.imageFailed'));
+        }
+      });
+    };
+    upload(0);
+  }
+
+  // ── Email verification ──────────────────────────────────────────────────
+  resendVerification() {
+    this.resendingVerification.set(true);
+    this.api.resendVerificationEmail().subscribe({
+      next: () => this.resendingVerification.set(false),
+      error: () => this.resendingVerification.set(false)
+    });
+  }
 
   save() {
     if (this.form.invalid) return;
@@ -557,7 +744,14 @@ export class ListingFormComponent implements OnInit, OnDestroy {
     });
   }
 
-  removeMedia(id: number, mediaId: number) {
+  async removeMedia(id: number, mediaId: number) {
+    const ok = await this.confirm.confirm({
+      title: this.i18n.lang() === 'ar' ? 'حذف الصورة' : 'Delete Image',
+      message: this.i18n.lang() === 'ar' ? 'هل أنت متأكد من حذف هذه الصورة؟ لن تتمكن من استعادتها.' : 'Are you sure you want to delete this image? This cannot be undone.',
+      danger: true,
+      confirmLabel: this.i18n.lang() === 'ar' ? 'حذف' : 'Delete'
+    });
+    if (!ok) return;
     this.api.deleteMedia(id, mediaId).subscribe(() => this.refresh(id));
   }
 
