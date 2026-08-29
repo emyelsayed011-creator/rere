@@ -13,6 +13,9 @@ export const routes: Routes = [
 
   { path: 'login', canActivate: [guestGuard], loadComponent: () => import('./features/auth/login').then(m => m.LoginComponent) },
   { path: 'register', canActivate: [guestGuard], loadComponent: () => import('./features/auth/register').then(m => m.RegisterComponent) },
+  { path: 'forgot-password', loadComponent: () => import('./features/auth/forgot-password').then(m => m.ForgotPasswordComponent) },
+  { path: 'reset-password', loadComponent: () => import('./features/auth/reset-password').then(m => m.ResetPasswordComponent) },
+  { path: 'confirm-email', loadComponent: () => import('./features/auth/confirm-email').then(m => m.ConfirmEmailComponent) },
 
   { path: 'profile', canActivate: [authGuard], loadComponent: () => import('./features/profile').then(m => m.ProfileComponent) },
   { path: 'my-listings', canActivate: [authGuard], loadComponent: () => import('./features/listings/listings').then(m => m.ListingsComponent), data: { mine: true } },

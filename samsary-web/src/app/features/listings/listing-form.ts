@@ -1,8 +1,9 @@
-﻿import { Component, ElementRef, inject, OnInit, signal, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
+﻿import { Component, ElementRef, inject, OnInit, signal, ViewChild, OnDestroy } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import * as L from 'leaflet';
 import { ApiService } from '../../core/api.service';
+import { AuthService } from '../../core/auth.service';
 import { I18nService, TranslatePipe } from '../../core/i18n.service';
 import { Category, Listing, ListingType } from '../../core/models';
 
@@ -18,7 +19,7 @@ const CURRENCIES = [
 @Component({
   selector: 'app-listing-form',
   standalone: true,
-  imports: [ReactiveFormsModule, TranslatePipe],
+  imports: [ReactiveFormsModule, TranslatePipe, RouterLink],
   template: `
     <h4 class="mb-3 fw-bold">{{ (editing() ? 'form.editTitle' : 'form.newTitle') | t }}</h4>
     <div class="card border-0 shadow-sm animate-fade-up">
@@ -85,6 +86,22 @@ const CURRENCIES = [
           @if (error()) {
             <div class="col-12"><div class="alert alert-danger py-2 small mb-0">{{ error() }}</div></div>
           }
+
+          <!-- Contact phone (readonly from profile) -->
+          <div class="col-md-6">
+            <label class="form-label fw-medium">{{ 'form.contactPhone' | t }}</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light"><i class="bi bi-telephone text-muted"></i></span>
+              <input class="form-control bg-light" [value]="auth.user()?.phone || ''" readonly>
+              <a routerLink="/profile" class="btn btn-outline-secondary" [title]="'form.editPhone' | t">
+                <i class="bi bi-pencil"></i>
+              </a>
+            </div>
+            @if (!auth.user()?.phone) {
+              <div class="text-warning small mt-1"><i class="bi bi-exclamation-triangle me-1"></i>{{ 'form.phoneRequired' | t }}</div>
+            }
+          </div>
+
           <div class="col-12 d-flex justify-content-end gap-2">
             <button type="button" class="btn btn-light" (click)="cancel()">{{ 'common.cancel' | t }}</button>
             <button class="btn btn-samsary" [disabled]="form.invalid || saving()">
@@ -132,21 +149,44 @@ const CURRENCIES = [
             </div>
           </div>
           @if (mediaError()) { <div class="alert alert-danger py-2 small">{{ mediaError() }}</div> }
-          <div class="row g-2">
-            @for (m of listing.media; track m.id) {
-              <div class="col-6 col-md-3 position-relative">
-                @if (m.mediaType === 1) {
-                  <img [src]="m.url" class="img-fluid rounded border" alt="">
-                } @else {
-                  <video [src]="m.url" class="w-100 rounded border" controls></video>
+
+          <!-- Media gallery -->
+          @if (listing.media.length > 0) {
+            <div class="mb-3">
+              <h6 class="fw-semibold mb-2">{{ 'form.uploadedMedia' | t }} ({{ listing.media.length }})</h6>
+              <div class="row g-2">
+                @for (m of listing.media; track m.id) {
+                  <div class="col-6 col-sm-4 col-md-3">
+                    <div class="position-relative rounded overflow-hidden border" style="aspect-ratio:4/3;background:#f0f0f0">
+                      @if (m.mediaType === 1) {
+                        <img [src]="m.thumbnailUrl || m.url" class="w-100 h-100 object-fit-cover" alt="">
+                        <div class="position-absolute top-0 start-0 m-1">
+                          <span class="badge bg-primary small"><i class="bi bi-image"></i></span>
+                        </div>
+                      } @else {
+                        <video [src]="m.url" class="w-100 h-100 object-fit-cover" preload="metadata"></video>
+                        <div class="position-absolute top-0 start-0 m-1">
+                          <span class="badge bg-warning text-dark small"><i class="bi bi-play-fill"></i> Video</span>
+                        </div>
+                      }
+                      <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 rounded-circle d-flex align-items-center justify-content-center"
+                              style="width:26px;height:26px;padding:0"
+                              (click)="removeMedia(listing.id, m.id)" type="button"
+                              [title]="'common.delete' | t">
+                        <i class="bi bi-x" style="font-size:.8rem"></i>
+                      </button>
+                      @if (m.mediaType === 2) {
+                        <a [href]="m.url" target="_blank"
+                           class="btn btn-sm btn-light position-absolute bottom-0 start-0 m-1 rounded-pill small">
+                          <i class="bi bi-play-circle me-1"></i>{{ 'form.viewVideo' | t }}
+                        </a>
+                      }
+                    </div>
+                  </div>
                 }
-                <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1"
-                        (click)="removeMedia(listing.id, m.id)">
-                  <i class="bi bi-trash"></i>
-                </button>
               </div>
-            }
-          </div>
+            </div>
+          }
           <div class="text-end mt-3">
             <button class="btn btn-samsary" (click)="finish()">
               <i class="bi bi-check2 me-1"></i>{{ 'form.submitReview' | t }}
@@ -163,6 +203,7 @@ export class ListingFormComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   readonly i18n = inject(I18nService);
+  readonly auth = inject(AuthService);
 
   @ViewChild('mapEl') mapEl?: ElementRef<HTMLDivElement>;
 

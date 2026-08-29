@@ -59,7 +59,11 @@ import { TranslatePipe } from '../../core/i18n.service';
             <label class="form-label fw-medium">{{ 'auth.password' | t }}</label>
             <div class="input-group">
               <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock text-muted"></i></span>
-              <input class="form-control border-start-0 ps-0" type="password" formControlName="password" autocomplete="new-password">
+              <input class="form-control border-start-0 border-end-0 ps-0" [type]="showPw() ? 'text' : 'password'"
+                     formControlName="password" autocomplete="new-password">
+              <button type="button" class="input-group-text bg-light border-start-0" (click)="showPw.update(v => !v)">
+                <i class="bi" [class.bi-eye]="!showPw()" [class.bi-eye-slash]="showPw()"></i>
+              </button>
             </div>
             <div class="form-text">{{ 'auth.passwordHint' | t }}</div>
           </div>
@@ -97,6 +101,7 @@ export class RegisterComponent {
   private router = inject(Router);
   loading = signal(false);
   errors = signal<string[]>([]);
+  showPw = signal(false);
 
   form = this.fb.nonNullable.group({
     displayName: ['', [Validators.required, Validators.maxLength(80)]],

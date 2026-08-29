@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { NavbarComponent } from './shared/navbar';
+import { ConfirmDialogComponent } from './shared/confirm-dialog';
 import { AuthService } from './core/auth.service';
 import { I18nService, TranslatePipe } from './core/i18n.service';
 import { ThemeService } from './core/theme.service';
@@ -8,16 +9,21 @@ import { ThemeService } from './core/theme.service';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, NavbarComponent, TranslatePipe],
+  imports: [RouterOutlet, NavbarComponent, ConfirmDialogComponent, TranslatePipe],
   template: `
-    <app-navbar />
-    <main class="container py-4">
-      <router-outlet />
-    </main>
-    <footer class="app-footer text-center py-4 mt-5">
-      <div class="navbar-brand-samsary mb-1">{{ theme.adminTheme()?.siteName || 'Samsary' }}</div>
-      <div class="text-muted small">© {{ year }} Samsary · {{ 'app.tagline' | t }}</div>
-    </footer>
+    <div class="d-flex flex-column min-vh-100">
+      <app-navbar />
+      <main class="container py-4 flex-grow-1">
+        <router-outlet />
+      </main>
+      <footer class="app-footer text-center py-4 mt-auto border-top">
+        <div class="container">
+          <div class="navbar-brand-samsary mb-1">{{ theme.adminTheme()?.siteName || 'سمسارة' }}</div>
+          <div class="text-muted small">© {{ year }} Samsary · {{ 'app.tagline' | t }}</div>
+        </div>
+      </footer>
+    </div>
+    <app-confirm-dialog />
   `
 })
 export class App implements OnInit {

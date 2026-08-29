@@ -62,8 +62,18 @@ export class ApiService {
   }
   markNotification(id: number) { return this.http.post<void>(`${this.base}/notifications/${id}/read`, {}); }
   markAllRead() { return this.http.post<void>(`${this.base}/notifications/read-all`, {}); }
-  getNotificationPrefs() { return this.http.get<any>(`${this.base}/notifications/preferences`); }
-  updateNotificationPrefs(body: any) { return this.http.put<any>(`${this.base}/notifications/preferences`, body); }
+
+  // auth extras
+  forgotPassword(email: string) {
+    return this.http.post<void>(`${this.base}/auth/forgot-password`,
+      JSON.stringify(email), { headers: { 'Content-Type': 'application/json' } });
+  }
+  resetPassword(email: string, token: string, newPassword: string) {
+    return this.http.post<void>(`${this.base}/auth/reset-password`, { email, token, newPassword });
+  }
+  confirmEmail(userId: string, token: string) {
+    return this.http.post<void>(`${this.base}/auth/confirm-email`, { userId, token });
+  }
 
   // reviews
   listingReviews(listingId: number, page = 1, pageSize = 10) {

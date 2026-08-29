@@ -10,7 +10,7 @@ import { I18nService, TranslatePipe } from '../core/i18n.service';
   standalone: true,
   imports: [RouterLink, RouterLinkActive, TranslatePipe],
   template: `
-    <nav class="navbar navbar-expand-lg sticky-top shadow-sm">
+    <nav class="navbar navbar-expand-lg sticky-top">
       <div class="container">
         <a class="navbar-brand navbar-brand-samsary" routerLink="/">
           <span class="navbar-brand-icon"><i class="bi bi-buildings-fill"></i></span>
