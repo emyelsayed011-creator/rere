@@ -11,6 +11,15 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
   selector: 'app-listings',
   standalone: true,
   imports: [RouterLink, FormsModule, DecimalPipe, TranslatePipe],
+  styles: [`
+    .sold-overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,.52); color: #fff;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      border-radius: .75rem .75rem 0 0; text-align: center; letter-spacing: .04em;
+    }
+    .listing-card:has(.sold-overlay) { opacity: .82; }
+  `],
   template: `
     <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
       <h4 class="mb-0 fw-bold">{{ (mineMode() ? 'listings.mine' : 'listings.browse') | t }}</h4>
@@ -22,25 +31,54 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
     @if (!mineMode()) {
       <div class="card border-0 shadow-sm mb-4 animate-fade-up">
         <div class="card-body row g-2">
-          <div class="col-md-5">
+          <div class="col-md-4">
             <input class="form-control" [placeholder]="'listings.searchPlaceholder' | t" [(ngModel)]="q" (keydown.enter)="reload()">
           </div>
-          <div class="col-md-3">
+          <div class="col-md-2">
             <select class="form-select" [(ngModel)]="categoryId" (change)="reload()">
               <option [ngValue]="null">{{ 'listings.allCategories' | t }}</option>
               @for (c of categories(); track c.id) { <option [ngValue]="c.id">{{ categoryName(c) }}</option> }
             </select>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-2">
             <select class="form-select" [(ngModel)]="type" (change)="reload()">
               <option [ngValue]="null">{{ 'common.all' | t }}</option>
               <option [ngValue]="1">{{ 'common.sale' | t }}</option>
               <option [ngValue]="2">{{ 'common.rent' | t }}</option>
             </select>
           </div>
-          <div class="col-md-1 d-grid">
-            <button class="btn btn-primary" (click)="reload()"><i class="bi bi-search"></i></button>
+          <div class="col-md-2">
+            <div class="input-group">
+              <span class="input-group-text bg-light px-2"><i class="bi bi-geo-alt text-muted"></i></span>
+              <input class="form-control" [(ngModel)]="locationQ"
+                     [placeholder]="i18n.lang() === 'ar' ? 'المدينة / المنطقة' : 'City / Area'"
+                     (keydown.enter)="reload()">
+              @if (locationQ) {
+                <button class="btn btn-outline-secondary px-2" type="button" (click)="locationQ=''; reload()">
+                  <i class="bi bi-x"></i>
+                </button>
+              }
+            </div>
           </div>
+          <div class="col-md-2 d-flex gap-1">
+            <button class="btn btn-primary flex-grow-1" (click)="reload()"><i class="bi bi-search"></i></button>
+            <button class="btn btn-outline-primary" (click)="nearMe()" [disabled]="geoLoading()"
+                    [title]="i18n.lang() === 'ar' ? 'قريب مني' : 'Near me'">
+              @if (geoLoading()) {
+                <span class="spinner-border spinner-border-sm"></span>
+              } @else {
+                <i class="bi bi-geo-alt-fill"></i>
+              }
+            </button>
+          </div>
+          @if (locationQ) {
+            <div class="col-12">
+              <span class="badge bg-primary-subtle text-primary rounded-pill py-1 px-3">
+                <i class="bi bi-geo-alt me-1"></i>{{ locationQ }}
+                <button class="btn-close btn-close ms-1" style="font-size:.6rem" (click)="locationQ=''; reload()"></button>
+              </span>
+            </div>
+          }
         </div>
       </div>
     }
@@ -66,6 +104,16 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
                   [class.bg-danger]="l.status===2" [class.bg-secondary]="l.status>2">
                   {{ statusLabel(l.status) }}
                 </span>
+              }
+              @if (l.status === ListingStatus.Sold || l.status === ListingStatus.Rented) {
+                <div class="sold-overlay">
+                  <i class="bi bi-lock-fill d-block mb-1" style="font-size:1.4rem"></i>
+                  <span class="fw-bold small">
+                    {{ l.status === ListingStatus.Sold
+                       ? (i18n.lang() === 'ar' ? 'تم البيع' : 'SOLD')
+                       : (i18n.lang() === 'ar' ? 'تم التأجير' : 'RENTED') }}
+                  </span>
+                </div>
               }
             </div>
             <div class="card-body">
@@ -98,12 +146,14 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
 export class ListingsComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
-  private i18n = inject(I18nService);
+  readonly i18n = inject(I18nService);
   auth = inject(AuthService);
+  readonly ListingStatus = ListingStatus;
 
   q = '';
   categoryId: number | null = null;
   type: ListingType | null = null;
+  locationQ = '';
   pageSize = 12;
 
   items = signal<Listing[]>([]);
@@ -111,6 +161,7 @@ export class ListingsComponent implements OnInit {
   total = signal(0);
   page = signal(1);
   mineMode = signal(false);
+  geoLoading = signal(false);
 
   totalPages = () => Math.max(1, Math.ceil(this.total() / this.pageSize));
 
@@ -123,13 +174,38 @@ export class ListingsComponent implements OnInit {
       const qp = this.route.snapshot.queryParamMap;
       const c = qp.get('categoryId'); if (c) this.categoryId = +c;
       const q = qp.get('q'); if (q) this.q = q;
+      const loc = qp.get('location'); if (loc) this.locationQ = loc;
       this.reload();
     }
   }
 
   reload() {
-    this.api.listings({ q: this.q, categoryId: this.categoryId ?? undefined, type: this.type ?? undefined, page: this.page(), pageSize: this.pageSize })
-      .subscribe(r => { this.items.set(r.items); this.total.set(r.total); });
+    this.api.listings({
+      q: this.q, categoryId: this.categoryId ?? undefined,
+      type: this.type ?? undefined, page: this.page(), pageSize: this.pageSize,
+      location: this.locationQ || undefined
+    }).subscribe(r => { this.items.set(r.items); this.total.set(r.total); });
+  }
+
+  nearMe() {
+    if (!navigator.geolocation) return;
+    this.geoLoading.set(true);
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const { latitude, longitude } = pos.coords;
+        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=${this.i18n.lang()}`)
+          .then(r => r.json())
+          .then(d => {
+            const a = d?.address;
+            this.locationQ = a?.suburb || a?.city || a?.town || a?.village || a?.state || '';
+            this.page.set(1);
+            this.reload();
+          })
+          .catch(() => { this.locationQ = `${latitude.toFixed(3)},${longitude.toFixed(3)}`; this.reload(); })
+          .finally(() => this.geoLoading.set(false));
+      },
+      () => this.geoLoading.set(false)
+    );
   }
 
   setPage(p: number) {

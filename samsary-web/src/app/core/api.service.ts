@@ -15,12 +15,13 @@ export class ApiService {
   categories() { return this.http.get<Category[]>(`${this.base}/categories`); }
 
   // listings
-  listings(opts: { q?: string; categoryId?: number; type?: ListingType; page?: number; pageSize?: number; ownerId?: string; } = {}) {
+  listings(opts: { q?: string; categoryId?: number; type?: ListingType; page?: number; pageSize?: number; ownerId?: string; location?: string; } = {}) {
     let p = new HttpParams();
     if (opts.q) p = p.set('q', opts.q);
     if (opts.categoryId != null) p = p.set('categoryId', opts.categoryId);
     if (opts.type != null) p = p.set('type', opts.type);
     if (opts.ownerId) p = p.set('ownerId', opts.ownerId);
+    if (opts.location) p = p.set('location', opts.location);
     p = p.set('page', opts.page ?? 1).set('pageSize', opts.pageSize ?? 12);
     return this.http.get<PagedListings>(`${this.base}/listings`, { params: p });
   }

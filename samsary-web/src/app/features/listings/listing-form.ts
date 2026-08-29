@@ -1,6 +1,7 @@
 ﻿import { Component, ElementRef, inject, OnInit, signal, ViewChild, OnDestroy } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { SlicePipe } from '@angular/common';
 import * as L from 'leaflet';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
@@ -26,19 +27,18 @@ const WIZARD_STEPS = [
 @Component({
   selector: 'app-listing-form',
   standalone: true,
-  imports: [ReactiveFormsModule, TranslatePipe, RouterLink],
+  imports: [ReactiveFormsModule, TranslatePipe, RouterLink, SlicePipe],
   template: `
     <!-- Email verification warning -->
     @if (auth.isAuthenticated() && auth.user()?.emailConfirmed === false) {
-      <div class="alert alert-warning d-flex align-items-center gap-2 mb-3 py-2">
-        <i class="bi bi-envelope-exclamation-fill fs-5"></i>
-        <div class="flex-grow-1 small">
-          {{ i18n.lang() === 'ar' ? 'بريدك الإلكتروني لم يتم التحقق منه بعد. يرجى تأكيد بريدك لتتمكن من نشر إعلانات.' : 'Your email is not verified yet. Please confirm your email to post listings.' }}
-        </div>
-        <button class="btn btn-warning btn-sm" (click)="resendVerification()" [disabled]="resendingVerification()">
+      <div class="email-verify-bar mb-3">
+        <i class="bi bi-envelope-slash-fill"></i>
+        <span class="flex-grow-1">
+          {{ i18n.lang() === 'ar' ? 'يرجى تأكيد بريدك الإلكتروني لتتمكن من نشر إعلانات' : 'Please verify your email to post listings' }}
+        </span>
+        <button class="btn btn-sm btn-outline-primary rounded-pill" (click)="resendVerification()" [disabled]="resendingVerification()">
           @if (resendingVerification()) { <span class="spinner-border spinner-border-sm"></span> }
-          @else { <i class="bi bi-send me-1"></i> }
-          {{ i18n.lang() === 'ar' ? 'إعادة إرسال' : 'Resend' }}
+          @else { {{ i18n.lang() === 'ar' ? 'إرسال رابط التأكيد' : 'Send verification link' }} }
         </button>
       </div>
     }
@@ -172,19 +172,20 @@ const WIZARD_STEPS = [
                 @if (fieldError('description')) { <div class="invalid-feedback d-block">{{ fieldError('description') }}</div> }
               </div>
               <div class="col-md-6">
-                <label class="form-label fw-medium">{{ 'form.contactPhone' | t }}</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-light"><i class="bi bi-telephone text-muted"></i></span>
-                  <input class="form-control bg-light" [value]="auth.user()?.phone || ''" readonly>
-                  <a routerLink="/profile" class="btn btn-outline-secondary" [title]="'form.editPhone' | t">
-                    <i class="bi bi-pencil"></i>
-                  </a>
-                </div>
-                @if (!auth.user()?.phone) {
-                  <div class="text-warning small mt-1">
-                    <i class="bi bi-exclamation-triangle me-1"></i>{{ 'form.phoneRequired' | t }}
-                  </div>
+                <label class="form-label fw-medium">
+                  <i class="bi bi-telephone-fill me-1 text-primary" style="font-size:.85rem"></i>
+                  {{ 'form.contactPhone' | t }}
+                </label>
+                <input class="form-control" type="tel" formControlName="contactPhone"
+                       placeholder="01xxxxxxxxx" dir="ltr">
+                @if (form.controls.contactPhone.invalid && form.controls.contactPhone.touched) {
+                  <div class="invalid-feedback d-block">{{ 'auth.phoneInvalid' | t }}</div>
                 }
+                <div class="form-text" style="font-size:.75rem">
+                  {{ i18n.lang() === 'ar'
+                    ? 'هذا الرقم سيظهر للمهتمين بإعلانك — يتم تحديثه في ملفك الشخصي تلقائياً'
+                    : 'Shown to interested buyers — auto-synced to your profile' }}
+                </div>
               </div>
             </div>
           }
@@ -244,7 +245,7 @@ const WIZARD_STEPS = [
               @if (step() === 3 || editing()) {
                 <div class="d-flex gap-2">
                   <button type="button" class="btn btn-light" (click)="cancel()">{{ 'common.cancel' | t }}</button>
-                  <button class="btn btn-samsary" [disabled]="form.invalid || saving()">
+                  <button class="btn btn-samsary" [disabled]="form.invalid || saving() || !emailOk()">
                     @if (saving()) { <span class="spinner-border spinner-border-sm me-2"></span> }
                     {{ (editing() ? 'form.save' : 'form.createContinue') | t }}
                   </button>
@@ -270,16 +271,13 @@ const WIZARD_STEPS = [
           </div>
         </div>
         <div class="card-body p-4">
-          <div class="alert alert-info small mb-3 py-2">
-            <i class="bi bi-info-circle me-1"></i>{{ 'form.videoInfo' | t }}
-          </div>
-          <div class="row g-3 mb-3">
+          <!-- ── Upload drop zones ── -->
+          <div class="row g-3 mb-4">
+            <!-- Images -->
             <div class="col-md-7">
               <label class="form-label fw-semibold">
                 <i class="bi bi-images me-1 text-primary"></i>{{ 'form.addImages' | t }}
-                <span class="text-muted fw-normal small ms-1">({{ 'form.optional' | t }})</span>
               </label>
-              <!-- Drag & Drop Zone -->
               <div class="dropzone" [class.dropzone--over]="dragging()"
                    (dragover)="$event.preventDefault(); dragging.set(true)"
                    (dragleave)="dragging.set(false)"
@@ -288,21 +286,18 @@ const WIZARD_STEPS = [
                    (keydown.enter)="imgInput.click()">
                 <i class="bi bi-cloud-upload fs-2 text-primary mb-1"></i>
                 <div class="fw-semibold small">
-                  {{ i18n.lang() === 'ar' ? 'اسحب الصور هنا أو اضغط للاختيار' : 'Drag images here or click to select' }}
+                  {{ i18n.lang() === 'ar' ? 'اسحب الصور هنا أو اضغط للاختيار' : 'Drag images here or click' }}
                 </div>
                 <div class="text-muted" style="font-size:.75rem">JPG, PNG, WEBP</div>
                 <input #imgInput type="file" accept="image/*" multiple hidden (change)="onFileSelected($event)">
               </div>
-              <!-- Pending file preview cards -->
               @if (pendingFiles().length > 0) {
                 <div class="row g-2 mt-2">
                   @for (f of pendingFiles(); track f.name; let i = $index) {
                     <div class="col-6 col-sm-4">
                       <div class="media-thumb">
                         <img [src]="previewUrl(f)" class="media-thumb__img" alt="">
-                        <button class="media-thumb__del" (click)="removePending(i)" type="button">
-                          <i class="bi bi-x-lg"></i>
-                        </button>
+                        <button class="media-thumb__del" (click)="removePending(i)" type="button"><i class="bi bi-x-lg"></i></button>
                         <div class="media-thumb__name">{{ f.name }}</div>
                       </div>
                     </div>
@@ -313,67 +308,145 @@ const WIZARD_STEPS = [
                           (click)="uploadPending(listing.id)" [disabled]="uploadingImgs()">
                     @if (uploadingImgs()) { <span class="spinner-border spinner-border-sm me-1"></span> }
                     @else { <i class="bi bi-cloud-upload me-1"></i> }
-                    {{ i18n.lang() === 'ar' ? 'رفع الصور' : 'Upload' }} ({{ pendingFiles().length }})
+                    {{ i18n.lang() === 'ar' ? 'رفع' : 'Upload' }} ({{ pendingFiles().length }})
                   </button>
-                  <button type="button" class="btn btn-light btn-sm"
-                          (click)="clearPending()" [disabled]="uploadingImgs()">
+                  <button type="button" class="btn btn-light btn-sm" (click)="clearPending()" [disabled]="uploadingImgs()">
                     {{ 'common.cancel' | t }}
                   </button>
                 </div>
               }
               @if (uploadingImgs()) {
-                <div class="progress mt-2" style="height:4px">
-                  <div class="progress-bar progress-bar-striped progress-bar-animated" style="width:100%"></div>
+                <div class="progress mt-2" style="height:3px">
+                  <div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div>
                 </div>
               }
             </div>
+
+            <!-- Video -->
             <div class="col-md-5">
               <label class="form-label fw-semibold">
                 <i class="bi bi-camera-video me-1 text-primary"></i>{{ 'form.addVideo' | t }}
-                <span class="text-muted fw-normal small ms-1">({{ 'form.optional' | t }})</span>
               </label>
-              <input type="file" class="form-control" accept="video/*" (change)="uploadVid($event, listing.id)">
-              <div class="form-text">{{ 'form.videoHint' | t }}</div>
+              @if (!pendingVid()) {
+                <div class="dropzone" [class.dropzone--over]="draggingVid()"
+                     (dragover)="$event.preventDefault(); draggingVid.set(true)"
+                     (dragleave)="draggingVid.set(false)"
+                     (drop)="onDropVid($event)"
+                     (click)="vidInput.click()" role="button" tabindex="0"
+                     (keydown.enter)="vidInput.click()">
+                  <i class="bi bi-play-circle fs-2 text-primary mb-1"></i>
+                  <div class="fw-semibold small">
+                    {{ i18n.lang() === 'ar' ? 'اسحب الفيديو هنا أو اضغط' : 'Drag video here or click' }}
+                  </div>
+                  <div class="text-muted" style="font-size:.75rem">MP4, MOV — {{ 'form.videoHint' | t }}</div>
+                  <input #vidInput type="file" accept="video/*" hidden (change)="onVidSelected($event)">
+                </div>
+              } @else {
+                <div class="media-thumb" style="aspect-ratio:16/9">
+                  <video [src]="pendingVidUrl()" class="media-thumb__img" preload="metadata"></video>
+                  <span class="position-absolute top-0 start-0 m-1 badge bg-dark bg-opacity-75 small">
+                    <i class="bi bi-play-fill me-1"></i>{{ pendingVid()!.name | slice:0:20 }}
+                  </span>
+                  <button class="media-thumb__del" (click)="pendingVid.set(null); clearPendingVidUrl()" type="button">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+                <div class="d-flex gap-2 mt-2">
+                  <button type="button" class="btn btn-samsary btn-sm"
+                          (click)="uploadPendingVid(listing.id)" [disabled]="uploadingVid()">
+                    @if (uploadingVid()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                    @else { <i class="bi bi-cloud-upload me-1"></i> }
+                    {{ i18n.lang() === 'ar' ? 'رفع الفيديو' : 'Upload video' }}
+                  </button>
+                  <button type="button" class="btn btn-light btn-sm" (click)="pendingVid.set(null); clearPendingVidUrl()"
+                          [disabled]="uploadingVid()">{{ 'common.cancel' | t }}</button>
+                </div>
+              }
               @if (uploadingVid()) {
-                <div class="progress mt-2" style="height:4px">
-                  <div class="progress-bar progress-bar-striped progress-bar-animated" style="width:100%"></div>
+                <div class="progress mt-2" style="height:3px">
+                  <div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div>
                 </div>
               }
             </div>
           </div>
-          @if (mediaError()) { <div class="alert alert-danger py-2 small">{{ mediaError() }}</div> }
 
+          @if (mediaError()) { <div class="alert alert-danger py-2 small mb-3">{{ mediaError() }}</div> }
+
+          <!-- ── Uploaded media carousel ── -->
           @if (listing.media.length > 0) {
             <div class="mb-3">
-              <h6 class="fw-semibold mb-2">{{ 'form.uploadedMedia' | t }} ({{ listing.media.length }})</h6>
-              <div class="row g-2">
-                @for (m of listing.media; track m.id) {
-                  <div class="col-6 col-sm-4 col-md-3">
-                    <div class="position-relative rounded overflow-hidden border" style="aspect-ratio:4/3;background:#f0f0f0">
-                      @if (m.mediaType === 1) {
-                        <img [src]="m.thumbnailUrl || m.url" class="w-100 h-100 object-fit-cover" alt="">
-                        <span class="position-absolute top-0 start-0 m-1 badge bg-primary small"><i class="bi bi-image"></i></span>
-                      } @else {
-                        <video [src]="m.url" class="w-100 h-100 object-fit-cover" preload="metadata"></video>
-                        <span class="position-absolute top-0 start-0 m-1 badge bg-warning text-dark small"><i class="bi bi-play-fill"></i></span>
-                      }
-                      <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 rounded-circle d-flex align-items-center justify-content-center"
-                              style="width:26px;height:26px;padding:0"
-                              (click)="removeMedia(listing.id, m.id)" type="button" [title]="'common.delete' | t">
-                        <i class="bi bi-trash" style="font-size:.8rem"></i>
-                      </button>
-                      @if (m.mediaType === 2) {
-                        <a [href]="m.url" target="_blank" rel="noopener"
-                           class="btn btn-sm btn-light position-absolute bottom-0 start-0 m-1 rounded-pill small">
-                          <i class="bi bi-play-circle me-1"></i>{{ 'form.viewVideo' | t }}
-                        </a>
-                      }
-                    </div>
+              <h6 class="fw-semibold mb-2 d-flex align-items-center gap-2">
+                {{ 'form.uploadedMedia' | t }}
+                <span class="badge rounded-pill bg-primary-subtle text-primary">{{ listing.media.length }}</span>
+              </h6>
+              @if (listing.media.length === 1) {
+                <!-- Single item — no carousel needed -->
+                <div class="rounded-3 overflow-hidden border position-relative" style="aspect-ratio:16/9;background:#f0f0f0">
+                  @if (listing.media[0].mediaType === 1) {
+                    <img [src]="listing.media[0].thumbnailUrl || listing.media[0].url" class="w-100 h-100 object-fit-cover" alt="">
+                  } @else {
+                    <video [src]="listing.media[0].url" controls class="w-100 h-100 object-fit-cover"
+                           [poster]="listing.media[0].thumbnailUrl || ''"></video>
+                  }
+                  <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle"
+                          style="width:28px;height:28px;padding:0"
+                          (click)="removeMedia(listing.id, listing.media[0].id)" type="button">
+                    <i class="bi bi-trash" style="font-size:.75rem"></i>
+                  </button>
+                </div>
+              } @else {
+                <!-- Multi-item Bootstrap carousel -->
+                <div id="uploadedCarousel" class="carousel slide rounded-3 overflow-hidden border" data-bs-interval="false">
+                  <div class="carousel-inner">
+                    @for (m of listing.media; track m.id; let i = $index) {
+                      <div class="carousel-item" [class.active]="i === 0" style="background:#f0f0f0">
+                        <div style="aspect-ratio:16/9;position:relative">
+                          @if (m.mediaType === 1) {
+                            <img [src]="m.thumbnailUrl || m.url" class="w-100 h-100 object-fit-cover" alt="">
+                            <span class="position-absolute top-0 start-0 m-2 badge bg-primary bg-opacity-75">
+                              <i class="bi bi-image me-1"></i>{{ i + 1 }}/{{ listing.media.length }}
+                            </span>
+                          } @else {
+                            <video [src]="m.url" controls class="w-100 h-100 object-fit-cover"
+                                   [poster]="m.thumbnailUrl || ''"></video>
+                            <span class="position-absolute top-0 start-0 m-2 badge bg-dark bg-opacity-75">
+                              <i class="bi bi-play-fill me-1"></i>{{ i18n.lang() === 'ar' ? 'فيديو' : 'Video' }}
+                            </span>
+                          }
+                          <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle"
+                                  style="width:28px;height:28px;padding:0"
+                                  (click)="removeMedia(listing.id, m.id)" type="button">
+                            <i class="bi bi-trash" style="font-size:.75rem"></i>
+                          </button>
+                        </div>
+                      </div>
+                    }
                   </div>
-                }
-              </div>
+                  <button class="carousel-control-prev" type="button" data-bs-target="#uploadedCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon"></span>
+                  </button>
+                  <button class="carousel-control-next" type="button" data-bs-target="#uploadedCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon"></span>
+                  </button>
+                  <!-- Thumbnail strip -->
+                  <div class="d-flex gap-1 p-2 bg-dark bg-opacity-10 overflow-auto">
+                    @for (m of listing.media; track m.id; let i = $index) {
+                      <div class="thumb-strip-item" [attr.data-bs-target]="'#uploadedCarousel'" [attr.data-bs-slide-to]="i">
+                        @if (m.mediaType === 1) {
+                          <img [src]="m.thumbnailUrl || m.url" class="w-100 h-100 object-fit-cover" alt="">
+                        } @else {
+                          <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-dark text-white">
+                            <i class="bi bi-play-fill"></i>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
             </div>
           }
+
           <div class="text-end mt-3">
             <button class="btn btn-samsary" (click)="finish()">
               <i class="bi bi-check2 me-1"></i>{{ 'form.submitReview' | t }}
@@ -428,7 +501,7 @@ const WIZARD_STEPS = [
     .loc-btn-primary:hover:not(:disabled) { background: var(--samsary-primary); color: #fff; }
     .loc-btn-secondary { border-color: #ced4da; color: #495057; }
     .loc-btn-secondary:hover:not(:disabled) { background: #f8f9fa; border-color: #adb5bd; }
-    /* Drag & drop zone */
+    /* Dropzone */
     .dropzone {
       border: 2px dashed #ced4da; border-radius: .75rem;
       background: #f8f9fa; padding: 1.5rem 1rem;
@@ -455,6 +528,20 @@ const WIZARD_STEPS = [
       position: absolute; bottom: 0; left: 0; right: 0;
       background: rgba(0,0,0,.5); color: #fff; font-size: .65rem;
       padding: 2px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    /* Thumbnail strip below carousel */
+    .thumb-strip-item {
+      flex: 0 0 56px; height: 40px; border-radius: .35rem; overflow: hidden;
+      cursor: pointer; border: 2px solid transparent; transition: border-color .15s;
+    }
+    .thumb-strip-item:hover { border-color: var(--samsary-primary); }
+    /* Email verify bar */
+    .email-verify-bar {
+      display: flex; align-items: center; gap: .75rem;
+      padding: .6rem 1rem; border-radius: .75rem;
+      background: rgba(var(--samsary-primary-rgb), .06);
+      border: 1px solid rgba(var(--samsary-primary-rgb), .2);
+      font-size: .85rem; color: var(--samsary-primary);
     }
     @media (max-width: 576px) {
       .wiz-label { display: none; }
@@ -483,7 +570,9 @@ export class ListingFormComponent implements OnInit, OnDestroy {
   uploadingVid = signal(false);
   uploadingImgs = signal(false);
   dragging = signal(false);
+  draggingVid = signal(false);
   pendingFiles = signal<File[]>([]);
+  pendingVid = signal<File | null>(null);
   resendingVerification = signal(false);
   error = signal<string | null>(null);
   mediaError = signal<string | null>(null);
@@ -506,7 +595,8 @@ export class ListingFormComponent implements OnInit, OnDestroy {
     categoryId: [0 as number, [Validators.required]],
     location: ['', [Validators.required]],
     isNegotiable: [false],
-    status: [ListingStatus.Approved as ListingStatus]
+    status: [ListingStatus.Approved as ListingStatus],
+    contactPhone: ['', [Validators.required, Validators.pattern(/^(\+?2)?01[0125][0-9]{8}$/)]]
   });
 
   fieldError(field: string): string | null {
@@ -514,10 +604,16 @@ export class ListingFormComponent implements OnInit, OnDestroy {
     return errs?.length ? errs[0] : null;
   }
 
+  // Email must be confirmed before creating a new listing
+  emailOk(): boolean {
+    return this.editing() || this.auth.user()?.emailConfirmed !== false;
+  }
+
   canNext(): boolean {
+    if (!this.emailOk()) return false;
     const f = this.form.controls;
     if (this.step() === 1) return f.type.valid && f.categoryId.valid && !!f.categoryId.value;
-    if (this.step() === 2) return f.title.valid && f.price.valid && f.currency.valid && f.description.valid;
+    if (this.step() === 2) return f.title.valid && f.price.valid && f.currency.valid && f.description.valid && f.contactPhone.valid;
     return false;
   }
 
@@ -559,6 +655,10 @@ export class ListingFormComponent implements OnInit, OnDestroy {
       this.categories.set(c);
       if (c.length && !this.form.value.categoryId) this.form.patchValue({ categoryId: c[0].id });
     });
+    // Pre-fill phone from logged-in user
+    const userPhone = this.auth.user()?.phone;
+    if (userPhone) this.form.patchValue({ contactPhone: userPhone });
+
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.editing.set(true);
@@ -569,7 +669,8 @@ export class ListingFormComponent implements OnInit, OnDestroy {
           currency: l.currency, type: l.type, categoryId: l.category.id,
           location: l.location || '', isNegotiable: l.isNegotiable,
           status: (l.status === ListingStatus.Sold || l.status === ListingStatus.Rented)
-            ? l.status : ListingStatus.Approved
+            ? l.status : ListingStatus.Approved,
+          contactPhone: l.ownerPhone || this.auth.user()?.phone || ''
         });
         this.created.set(l);
         // In edit mode all steps render together, so map is available
@@ -630,6 +731,7 @@ export class ListingFormComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.map?.remove();
     this.objectUrls.forEach(u => URL.revokeObjectURL(u));
+    this.clearPendingVidUrl();
   }
 
   // ── Drag & Drop ────────────────────────────────────────────────────────
@@ -657,6 +759,53 @@ export class ListingFormComponent implements OnInit, OnDestroy {
   }
 
   clearPending() { this.pendingFiles.set([]); }
+
+  // ── Video drop & preview ───────────────────────────────────────────────
+  private _vidUrl: string | null = null;
+
+  onDropVid(ev: DragEvent) {
+    ev.preventDefault();
+    this.draggingVid.set(false);
+    const f = Array.from(ev.dataTransfer?.files ?? []).find(f => f.type.startsWith('video/'));
+    if (f) { this.clearPendingVidUrl(); this.pendingVid.set(f); }
+  }
+
+  onVidSelected(ev: Event) {
+    const f = (ev.target as HTMLInputElement).files?.[0];
+    if (f) { this.clearPendingVidUrl(); this.pendingVid.set(f); }
+    (ev.target as HTMLInputElement).value = '';
+  }
+
+  pendingVidUrl(): string {
+    if (!this._vidUrl && this.pendingVid()) {
+      this._vidUrl = URL.createObjectURL(this.pendingVid()!);
+      this.objectUrls.push(this._vidUrl);
+    }
+    return this._vidUrl ?? '';
+  }
+
+  clearPendingVidUrl() {
+    if (this._vidUrl) { URL.revokeObjectURL(this._vidUrl); this._vidUrl = null; }
+  }
+
+  uploadPendingVid(id: number) {
+    const f = this.pendingVid();
+    if (!f) return;
+    this.mediaError.set(null);
+    this.uploadingVid.set(true);
+    this.api.uploadVideo(id, f).subscribe({
+      next: () => {
+        this.uploadingVid.set(false);
+        this.pendingVid.set(null);
+        this.clearPendingVidUrl();
+        this.refresh(id);
+      },
+      error: e => {
+        this.uploadingVid.set(false);
+        this.mediaError.set(e?.error?.detail || this.i18n.t('form.videoFailed'));
+      }
+    });
+  }
 
   uploadPending(id: number) {
     const files = this.pendingFiles();
@@ -696,26 +845,48 @@ export class ListingFormComponent implements OnInit, OnDestroy {
     this.error.set(null);
     this.validationErrors.set({});
     const body = this.form.getRawValue();
-    const req = this.editingId
-      ? this.api.updateListing(this.editingId, body)
-      : this.api.createListing(body);
-    req.subscribe({
-      next: l => {
-        this.created.set(l);
-        this.saving.set(false);
-        if (!this.editing()) window.scrollTo({ top: 0, behavior: 'smooth' });
-      },
-      error: e => {
-        const apiErrors = e?.error?.errors;
-        if (apiErrors) {
-          this.validationErrors.set(
-            Object.fromEntries(Object.entries(apiErrors).map(([k, v]) => [k.toLowerCase(), v as string[]]))
-          );
+
+    // Sync phone to user profile if it changed
+    const currentPhone = this.auth.user()?.phone;
+    const newPhone = body.contactPhone?.trim();
+    const syncPhone$ = (newPhone && newPhone !== currentPhone)
+      ? this.api.updateProfile({
+          displayName: this.auth.user()?.displayName ?? '',
+          phone: newPhone
+        })
+      : null;
+
+    const doSave = () => {
+      const req = this.editingId
+        ? this.api.updateListing(this.editingId, body)
+        : this.api.createListing(body);
+      req.subscribe({
+        next: l => {
+          this.created.set(l);
+          this.saving.set(false);
+          if (!this.editing()) window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
+        error: e => {
+          const apiErrors = e?.error?.errors;
+          if (apiErrors) {
+            this.validationErrors.set(
+              Object.fromEntries(Object.entries(apiErrors).map(([k, v]) => [k.toLowerCase(), v as string[]]))
+            );
+          }
+          this.error.set(e?.error?.detail || e?.error?.title || this.i18n.t('form.saveFailed'));
+          this.saving.set(false);
         }
-        this.error.set(e?.error?.detail || e?.error?.title || this.i18n.t('form.saveFailed'));
-        this.saving.set(false);
-      }
-    });
+      });
+    };
+
+    if (syncPhone$) {
+      syncPhone$.subscribe({
+        next: u => { this.auth.updateLocalUser(u); doSave(); },
+        error: () => doSave() // profile update failed — still save listing
+      });
+    } else {
+      doSave();
+    }
   }
 
   uploadImages(ev: Event, id: number) {
@@ -731,17 +902,6 @@ export class ListingFormComponent implements OnInit, OnDestroy {
       });
     };
     upload(0);
-  }
-
-  uploadVid(ev: Event, id: number) {
-    const file = (ev.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-    this.mediaError.set(null);
-    this.uploadingVid.set(true);
-    this.api.uploadVideo(id, file).subscribe({
-      next: () => { this.uploadingVid.set(false); this.refresh(id); },
-      error: e => { this.uploadingVid.set(false); this.mediaError.set(e?.error?.detail || this.i18n.t('form.videoFailed')); }
-    });
   }
 
   async removeMedia(id: number, mediaId: number) {

@@ -1,16 +1,18 @@
-import { Component, inject, OnInit, effect } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Component, inject, OnInit, effect, signal } from '@angular/core';
+import { RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { DatePipe } from '@angular/common';
 import { AuthService } from '../core/auth.service';
 import { AuthModalService } from '../core/auth-modal.service';
 import { RealtimeService } from '../core/realtime.service';
 import { ApiService } from '../core/api.service';
 import { I18nService, TranslatePipe } from '../core/i18n.service';
 import { ThemeService } from '../core/theme.service';
+import { NotificationItem } from '../core/models';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, TranslatePipe],
+  imports: [RouterLink, RouterLinkActive, TranslatePipe, DatePipe],
   template: `
     <nav class="navbar navbar-expand-lg sticky-top">
       <div class="container">
@@ -50,10 +52,62 @@ import { ThemeService } from '../core/theme.service';
                 </a>
               </li>
               <li class="nav-item position-relative">
-                <a class="nav-link position-relative" routerLink="/notifications" [title]="'nav.notifications' | t">
+                <button type="button" class="btn nav-link position-relative notif-btn"
+                        (click)="toggleNotif()" [attr.aria-label]="'nav.notifications' | t">
                   <i class="bi bi-bell fs-5"></i>
-                  @if (unread() > 0) { <span class="notif-dot"></span> }
-                </a>
+                  @if (unread() > 0) { <span class="notif-dot">{{ unread() > 9 ? '9+' : unread() }}</span> }
+                </button>
+
+                <!-- Notifications panel -->
+                @if (notifOpen()) {
+                  <div class="notif-backdrop" (click)="notifOpen.set(false)"></div>
+                  <div class="notif-panel shadow-lg">
+                    <div class="notif-panel-head d-flex align-items-center justify-content-between">
+                      <span class="fw-bold small">{{ 'notif.title' | t }}</span>
+                      <div class="d-flex gap-2 align-items-center">
+                        @if (notifItems().some(n => !n.isRead)) {
+                          <button class="btn btn-link btn-sm p-0 text-primary" (click)="markAllNotif()">
+                            <i class="bi bi-check2-all me-1"></i>{{ 'notif.markAll' | t }}
+                          </button>
+                        }
+                        <button class="btn-close btn-close-sm" (click)="notifOpen.set(false)"></button>
+                      </div>
+                    </div>
+                    <div class="notif-panel-body">
+                      @for (n of notifItems(); track n.id) {
+                        <div class="notif-row" [class.unread]="!n.isRead" (click)="openNotif(n)">
+                          <div class="notif-row-icon">
+                            <i class="bi"
+                               [class.bi-check2-circle]="n.type===1" [class.text-success]="n.type===1"
+                               [class.bi-x-circle]="n.type===2"      [class.text-danger]="n.type===2"
+                               [class.bi-chat-dots-fill]="n.type===3" [class.text-primary]="n.type===3"
+                               [class.bi-shield-lock-fill]="n.type===4" [class.text-warning]="n.type===4"
+                               [class.bi-megaphone-fill]="n.type===5||n.type===6"
+                               [class.bi-bell-fill]="n.type===0||n.type===7||n.type===8||n.type===9"
+                               [class.text-secondary]="n.type===0"></i>
+                          </div>
+                          <div class="notif-row-body">
+                            <div class="notif-row-title">{{ n.title }}</div>
+                            <div class="notif-row-msg">{{ n.message }}</div>
+                            <div class="notif-row-time">{{ n.createdAt | date:'shortTime' }}</div>
+                          </div>
+                          @if (!n.isRead) {
+                            <div class="notif-unread-dot"></div>
+                          }
+                        </div>
+                      } @empty {
+                        <div class="text-center text-muted py-4 small">
+                          <i class="bi bi-bell-slash d-block fs-2 mb-2 opacity-25"></i>
+                          {{ 'notif.empty' | t }}
+                        </div>
+                      }
+                    </div>
+                    <a routerLink="/notifications" class="notif-panel-footer" (click)="notifOpen.set(false)">
+                      {{ i18n.lang() === 'ar' ? 'عرض كل الإشعارات' : 'View all notifications' }}
+                      <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                  </div>
+                }
               </li>
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle user-menu-toggle d-flex align-items-center" data-bs-toggle="dropdown">
@@ -82,7 +136,55 @@ import { ThemeService } from '../core/theme.service';
         </div>
       </div>
     </nav>
-  `
+  `,
+  styles: [`
+    .notif-btn { background: none; border: none; padding: .375rem .5rem; color: inherit; }
+    .notif-btn:hover { opacity: .75; }
+    .notif-dot {
+      position: absolute; top: 2px; inset-inline-end: 0;
+      min-width: 16px; height: 16px; border-radius: 999px; padding: 0 3px;
+      background: #dc3545; color: #fff; font-size: .6rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid #fff;
+    }
+    .notif-backdrop {
+      position: fixed; inset: 0; z-index: 1040;
+    }
+    .notif-panel {
+      position: absolute; inset-inline-end: 0; top: calc(100% + 8px); z-index: 1041;
+      width: 340px; max-width: 95vw;
+      background: var(--bs-body-bg); border-radius: 1rem;
+      border: 1px solid var(--bs-border-color); overflow: hidden;
+    }
+    .notif-panel-head {
+      padding: .75rem 1rem; border-bottom: 1px solid var(--bs-border-color);
+      background: var(--bs-tertiary-bg);
+    }
+    .notif-panel-body { max-height: 360px; overflow-y: auto; }
+    .notif-row {
+      display: flex; align-items: flex-start; gap: .65rem;
+      padding: .7rem 1rem; cursor: pointer; border-bottom: 1px solid var(--bs-border-color);
+      transition: background .12s;
+    }
+    .notif-row:hover { background: var(--bs-tertiary-bg); }
+    .notif-row.unread { background: rgba(var(--bs-primary-rgb), .05); }
+    .notif-row-icon { font-size: 1.1rem; flex-shrink: 0; padding-top: 2px; }
+    .notif-row-body { flex: 1; min-width: 0; }
+    .notif-row-title { font-size: .82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .notif-row-msg   { font-size: .75rem; color: var(--bs-secondary-color); margin-top: 1px;
+                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .notif-row-time  { font-size: .68rem; color: var(--bs-secondary-color); margin-top: 2px; }
+    .notif-unread-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--bs-primary);
+      flex-shrink: 0; margin-top: 6px;
+    }
+    .notif-panel-footer {
+      display: block; text-align: center; padding: .6rem;
+      font-size: .8rem; color: var(--bs-primary); text-decoration: none;
+      border-top: 1px solid var(--bs-border-color); background: var(--bs-tertiary-bg);
+    }
+    .notif-panel-footer:hover { text-decoration: underline; }
+  `]
 })
 export class NavbarComponent implements OnInit {
   auth = inject(AuthService);
@@ -91,6 +193,10 @@ export class NavbarComponent implements OnInit {
   private theme = inject(ThemeService);
   private rt = inject(RealtimeService);
   private api = inject(ApiService);
+  private router = inject(Router);
+
+  notifOpen = signal(false);
+  notifItems = signal<NotificationItem[]>([]);
 
   siteName() {
     const t = this.theme.adminTheme();
@@ -126,6 +232,30 @@ export class NavbarComponent implements OnInit {
     this.api.notifications(true).subscribe({
       next: r => (this.unread as any).set(r.unread),
       error: () => { }
+    });
+  }
+
+  toggleNotif() {
+    if (this.notifOpen()) { this.notifOpen.set(false); return; }
+    this.notifOpen.set(true);
+    this.api.notifications().subscribe(r => this.notifItems.set(r.items.slice(0, 10)));
+  }
+
+  openNotif(n: NotificationItem) {
+    if (!n.isRead) {
+      this.api.markNotification(n.id).subscribe(() => {
+        this.notifItems.update(list => list.map(x => x.id === n.id ? { ...x, isRead: true } : x));
+        (this.unread as any).set(Math.max(0, this.unread() - 1));
+      });
+    }
+    this.notifOpen.set(false);
+    if (n.link) this.router.navigateByUrl(n.link);
+  }
+
+  markAllNotif() {
+    this.api.markAllRead().subscribe(() => {
+      this.notifItems.update(list => list.map(n => ({ ...n, isRead: true })));
+      (this.unread as any).set(0);
     });
   }
 

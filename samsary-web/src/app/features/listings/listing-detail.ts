@@ -19,38 +19,76 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
       <div class="row g-4 animate-fade-up">
         <div class="col-lg-8">
           <div class="card border-0 shadow-sm overflow-hidden">
-            <!-- Media carousel -->
+
+            <!-- ── Media carousel ── -->
             @if (l.media.length) {
-              <div id="listingCarousel" class="carousel slide" data-bs-ride="carousel">
-                <div class="carousel-inner">
-                  @for (m of l.media; track m.id; let i = $index) {
-                    <div class="carousel-item ratio ratio-16x9" [class.active]="i === 0">
-                      @if (m.mediaType === MediaType.Image) {
-                        <img [src]="m.url" class="object-fit-cover" alt="">
-                      } @else {
-                        <video [src]="m.url" controls [poster]="m.thumbnailUrl || ''" class="w-100 h-100"></video>
-                      }
-                    </div>
+              <div class="media-carousel-wrap position-relative">
+                <!-- Sold / Rented overlay banner -->
+                @if (l.status === ListingStatus.Sold || l.status === ListingStatus.Rented) {
+                  <div class="sold-ribbon">
+                    <i class="bi bi-lock-fill me-1"></i>
+                    {{ l.status === ListingStatus.Sold
+                       ? (i18n.lang() === 'ar' ? 'تم البيع' : 'SOLD')
+                       : (i18n.lang() === 'ar' ? 'تم التأجير' : 'RENTED') }}
+                  </div>
+                }
+
+                <div id="listingCarousel" class="carousel slide" data-bs-ride="false">
+                  <div class="carousel-inner">
+                    @for (m of l.media; track m.id; let i = $index) {
+                      <div class="carousel-item" [class.active]="i === 0">
+                        <div class="carousel-media-frame">
+                          @if (m.mediaType === MediaType.Image) {
+                            <img [src]="m.url" class="carousel-media-img" [alt]="'Photo ' + (i+1)">
+                          } @else {
+                            <video [src]="m.url" controls [poster]="m.thumbnailUrl || ''"
+                                   class="carousel-media-img" preload="metadata"></video>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+
+                  @if (l.media.length > 1) {
+                    <button class="carousel-control-prev" type="button"
+                            data-bs-target="#listingCarousel" data-bs-slide="prev">
+                      <span class="carousel-control-prev-icon"></span>
+                    </button>
+                    <button class="carousel-control-next" type="button"
+                            data-bs-target="#listingCarousel" data-bs-slide="next">
+                      <span class="carousel-control-next-icon"></span>
+                    </button>
                   }
                 </div>
+
+                <!-- Thumbnail strip -->
                 @if (l.media.length > 1) {
-                  <button class="carousel-control-prev" type="button" data-bs-target="#listingCarousel" data-bs-slide="prev">
-                    <span class="carousel-control-prev-icon"></span>
-                  </button>
-                  <button class="carousel-control-next" type="button" data-bs-target="#listingCarousel" data-bs-slide="next">
-                    <span class="carousel-control-next-icon"></span>
-                  </button>
-                  <div class="carousel-indicators">
+                  <div class="thumb-strip">
                     @for (m of l.media; track m.id; let i = $index) {
-                      <button type="button" data-bs-target="#listingCarousel" [attr.data-bs-slide-to]="i"
-                              [class.active]="i===0"></button>
+                      <button class="thumb-item" type="button"
+                              data-bs-target="#listingCarousel" [attr.data-bs-slide-to]="i"
+                              [class.active]="i === 0">
+                        @if (m.mediaType === MediaType.Image) {
+                          <img [src]="m.thumbnailUrl || m.url" class="w-100 h-100 object-fit-cover" alt="">
+                        } @else {
+                          <div class="thumb-vid-placeholder">
+                            <i class="bi bi-play-circle-fill"></i>
+                          </div>
+                        }
+                        @if (m.mediaType === MediaType.Video) {
+                          <span class="thumb-vid-badge"><i class="bi bi-play-fill"></i></span>
+                        }
+                      </button>
                     }
                   </div>
                 }
               </div>
+
             } @else {
-              <div class="ratio ratio-16x9 d-flex align-items-center justify-content-center bg-light text-muted">
-                <div class="text-center"><i class="bi bi-image fs-1 d-block mb-2"></i>
+              <div class="d-flex align-items-center justify-content-center bg-light text-muted"
+                   style="height:280px">
+                <div class="text-center">
+                  <i class="bi bi-image fs-1 d-block mb-2 opacity-25"></i>
                   <span class="small">{{ i18n.lang() === 'ar' ? 'لا توجد صور' : 'No images' }}</span>
                 </div>
               </div>
@@ -151,7 +189,7 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
               </a>
 
               <!-- Phone -->
-              @if (l.ownerPhone) {
+              @if (l.ownerPhone && l.status !== ListingStatus.Sold && l.status !== ListingStatus.Rented) {
                 <a [href]="'tel:' + l.ownerPhone" class="btn btn-outline-success w-100 mb-2">
                   <i class="bi bi-telephone-fill me-2"></i>{{ l.ownerPhone }}
                 </a>
@@ -163,8 +201,19 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
                 </a>
               }
 
-              <!-- Message -->
-              @if (auth.isAuthenticated() && auth.user()?.id !== l.ownerId) {
+              <!-- Sold/Rented notice -->
+              @if (l.status === ListingStatus.Sold || l.status === ListingStatus.Rented) {
+                <div class="closed-notice">
+                  <i class="bi bi-lock-fill me-2"></i>
+                  {{ l.status === ListingStatus.Sold
+                     ? (i18n.lang() === 'ar' ? 'هذا الإعلان مغلق — تم البيع' : 'This listing is closed — already sold')
+                     : (i18n.lang() === 'ar' ? 'هذا الإعلان مغلق — تم التأجير' : 'This listing is closed — already rented') }}
+                </div>
+              }
+
+              <!-- Message (hidden if sold/rented) -->
+              @if (auth.isAuthenticated() && auth.user()?.id !== l.ownerId
+                   && l.status !== ListingStatus.Sold && l.status !== ListingStatus.Rented) {
                 <textarea class="form-control mb-2" rows="3" [(ngModel)]="message"
                           [placeholder]="'detail.writeMessage' | t"></textarea>
                 <button class="btn btn-samsary w-100" (click)="sendMessage(l.ownerId, l.id)"
@@ -172,7 +221,8 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
                   @if (sending()) { <span class="spinner-border spinner-border-sm me-2"></span> }
                   <i class="bi bi-chat-dots me-1"></i> {{ 'detail.contactSeller' | t }}
                 </button>
-              } @else if (!auth.isAuthenticated()) {
+              } @else if (!auth.isAuthenticated()
+                          && l.status !== ListingStatus.Sold && l.status !== ListingStatus.Rented) {
                 <a routerLink="/login" class="btn btn-outline-primary w-100">
                   {{ 'detail.signInToContact' | t }}
                 </a>
@@ -198,7 +248,57 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
     } @else {
       <div class="text-center text-muted py-5"><div class="spinner-border"></div></div>
     }
-  `
+  `,
+  styles: [`
+    /* ── Carousel ── */
+    .media-carousel-wrap { background: #0d1117; }
+    .carousel-media-frame {
+      display: flex; align-items: center; justify-content: center;
+      height: 400px; background: #0d1117;
+    }
+    @media (max-width: 576px) { .carousel-media-frame { height: 240px; } }
+    .carousel-media-img {
+      max-width: 100%; max-height: 100%; width: 100%;
+      height: 100%; object-fit: contain; display: block;
+    }
+    /* Thumbnail strip */
+    .thumb-strip {
+      display: flex; gap: 4px; padding: 6px 8px;
+      background: rgba(0,0,0,.55); overflow-x: auto; scrollbar-width: thin;
+    }
+    .thumb-item {
+      flex: 0 0 64px; height: 46px; border-radius: 4px; overflow: hidden;
+      border: 2px solid transparent; background: none; padding: 0; cursor: pointer;
+      transition: border-color .15s;
+    }
+    .thumb-item.active, .thumb-item:hover { border-color: #fff; }
+    .thumb-vid-placeholder {
+      width: 100%; height: 100%; background: #222;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 1.2rem;
+    }
+    .thumb-vid-badge {
+      position: absolute; bottom: 2px; end: 2px;
+      background: rgba(0,0,0,.6); color: #fff; font-size: .55rem;
+      border-radius: 2px; padding: 1px 3px;
+    }
+    /* Sold ribbon */
+    .sold-ribbon {
+      position: absolute; top: 16px; inset-inline-start: 0; z-index: 10;
+      background: #dc3545; color: #fff; font-size: .85rem; font-weight: 700;
+      padding: .35rem 1.1rem .35rem .9rem;
+      border-radius: 0 999px 999px 0;
+      box-shadow: 2px 2px 8px rgba(0,0,0,.3);
+      letter-spacing: .04em; text-transform: uppercase;
+    }
+    /* Closed notice */
+    .closed-notice {
+      display: flex; align-items: center; gap: .5rem;
+      padding: .65rem 1rem; border-radius: .65rem;
+      background: rgba(220,53,69,.08); border: 1px solid rgba(220,53,69,.25);
+      color: #dc3545; font-size: .85rem; font-weight: 600; margin-bottom: .75rem;
+    }
+  `]
 })
 export class ListingDetailComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
