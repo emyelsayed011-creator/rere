@@ -4,6 +4,7 @@ using Samsary.Application.Common.Messaging;
 using Samsary.Application.Common.Results;
 using Samsary.Domain.Entities;
 using Samsary.Domain.Enums;
+using Samsary.Domain.Repositories;
 
 namespace Samsary.Application.Features.Admin.Commands;
 
@@ -19,10 +20,12 @@ public sealed class BanUserCommandHandler : ICommandHandler<BanUserCommand>
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _admin;
     private readonly INotificationService _notify;
+    private readonly IRefreshTokenRepository _refreshTokens;
 
-    public BanUserCommandHandler(IApplicationDbContext db, ICurrentUser admin, INotificationService notify)
+    public BanUserCommandHandler(IApplicationDbContext db, ICurrentUser admin, INotificationService notify,
+        IRefreshTokenRepository refreshTokens)
     {
-        _db = db; _admin = admin; _notify = notify;
+        _db = db; _admin = admin; _notify = notify; _refreshTokens = refreshTokens;
     }
 
     public async Task<Result> Handle(BanUserCommand r, CancellationToken ct)
@@ -56,6 +59,9 @@ public sealed class BanUserCommandHandler : ICommandHandler<BanUserCommand>
         user.BannedUntil = until;
 
         await _db.SaveChangesAsync(ct);
+
+        // Immediately invalidate all active sessions so the banned user is kicked out
+        await _refreshTokens.RevokeAllForUserAsync(r.UserId, ct);
 
         // Notify the user
         var durationText = r.DurationHours.HasValue

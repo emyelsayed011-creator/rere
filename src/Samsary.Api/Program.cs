@@ -204,6 +204,7 @@ app.UseRateLimiter();
 app.UseOutputCache();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<BanCheckMiddleware>();
 app.UseMiddleware<RequestLoggingMiddleware>();
 
 

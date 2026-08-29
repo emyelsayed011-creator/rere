@@ -70,13 +70,13 @@ html[dir='rtl'] body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: .5rem;
+  width: 34px;
+  height: 34px;
+  border-radius: .6rem;
   background: var(--samsary-gradient);
   color: #fff !important;
-  font-size: 1rem;
   flex-shrink: 0;
+  box-shadow: 0 3px 10px rgba(var(--samsary-primary-rgb), .35);
 }
 
 .navbar-brand-text {

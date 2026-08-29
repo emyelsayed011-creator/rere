@@ -79,7 +79,17 @@ public sealed class IdentityService : IIdentityService
     public async Task<Result<AuthResponseDto>> LoginAsync(string email, string password, CancellationToken cancellationToken = default)
     {
         var user = await _userManager.FindByEmailAsync(email);
-        if (user is null || user.IsBlocked)
+        if (user is null) return Error.Unauthorized("Auth.InvalidCredentials", "Invalid credentials.");
+
+        // Auto-lift expired temporary bans before checking
+        if (user.BannedUntil.HasValue && user.BannedUntil <= DateTime.UtcNow)
+        {
+            user.IsBlocked = false;
+            user.BannedUntil = null;
+            await _userManager.UpdateAsync(user);
+        }
+
+        if (user.IsBlocked || (user.BannedUntil.HasValue && user.BannedUntil > DateTime.UtcNow))
             return Error.Unauthorized("Auth.InvalidCredentials", "Invalid credentials.");
 
         var check = await _signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
@@ -98,7 +108,17 @@ public sealed class IdentityService : IIdentityService
             return Error.Unauthorized("Auth.InvalidToken", "Refresh token is invalid or expired.");
 
         var user = stored.User;
-        if (user is null || user.IsBlocked)
+        if (user is null) return Error.Unauthorized("Auth.InvalidToken", "Refresh token is invalid or expired.");
+
+        // Auto-lift expired temporary bans
+        if (user.BannedUntil.HasValue && user.BannedUntil <= DateTime.UtcNow)
+        {
+            user.IsBlocked = false;
+            user.BannedUntil = null;
+            await _userManager.UpdateAsync(user);
+        }
+
+        if (user.IsBlocked || (user.BannedUntil.HasValue && user.BannedUntil > DateTime.UtcNow))
             return Error.Unauthorized("Auth.InvalidToken", "Refresh token is invalid or expired.");
 
         // Rotate: revoke old token, issue new one.

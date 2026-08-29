@@ -17,7 +17,14 @@ import { NotificationItem } from '../core/models';
     <nav class="navbar sticky-top">
       <div class="container">
         <a class="navbar-brand navbar-brand-samsary" routerLink="/">
-          <span class="navbar-brand-icon"><i class="bi bi-buildings-fill"></i></span>
+          <span class="navbar-brand-icon">
+            <!-- House + key: broker/marketplace concept -->
+            <svg viewBox="0 0 36 36" width="20" height="20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 4 L3 17 h4 v13 h7 v-7 h8 v7 h7 V17 h4 Z" opacity=".95"/>
+              <circle cx="18" cy="22" r="2.2"/>
+              <rect x="16.8" y="24" width="2.4" height="4" rx="1"/>
+            </svg>
+          </span>
           <span class="navbar-brand-text">{{ siteName() }}</span>
         </a>
 
@@ -27,12 +34,6 @@ import { NotificationItem } from '../core/models';
             <li class="nav-item"><a class="nav-link" routerLink="/listings" routerLinkActive="active">{{ 'nav.browse' | t }}</a></li>
             @if (auth.isAuthenticated()) {
               <li class="nav-item"><a class="nav-link" routerLink="/my-listings" routerLinkActive="active">{{ 'nav.myListings' | t }}</a></li>
-              <li class="nav-item"><a class="nav-link position-relative" routerLink="/chat" routerLinkActive="active">
-                <i class="bi bi-chat-dots me-1"></i>{{ 'nav.chat' | t }}
-                @if (unreadChats() > 0) {
-                  <span class="notif-dot" style="top:-2px;inset-inline-end:-4px">{{ unreadChats() > 9 ? '9+' : unreadChats() }}</span>
-                }
-              </a></li>
             }
             @if (auth.isAdmin()) {
               <li class="nav-item"><a class="nav-link fw-semibold" routerLink="/admin" routerLinkActive="active">
@@ -40,7 +41,7 @@ import { NotificationItem } from '../core/models';
               </a></li>
             }
           </ul>
-          <ul class="navbar-nav align-items-center gap-2 flex-row">
+          <ul class="navbar-nav align-items-center gap-1 flex-row">
             <li class="nav-item">
               <div class="lang-switch" role="group">
                 <button type="button" [class.active]="i18n.lang() === 'en'" (click)="i18n.setLang('en')">EN</button>
@@ -49,12 +50,22 @@ import { NotificationItem } from '../core/models';
             </li>
             @if (auth.isAuthenticated()) {
               <li class="nav-item">
-                <a routerLink="/listings/new" class="btn btn-samsary btn-sm">
-                  <i class="bi bi-plus-lg"></i> {{ 'nav.post' | t }}
+                <a routerLink="/listings/new" class="btn btn-samsary btn-sm px-3">
+                  <i class="bi bi-plus-lg me-1"></i>{{ 'nav.post' | t }}
                 </a>
               </li>
+              <!-- Chat icon button (same row as bell) -->
+              <li class="nav-item">
+                <a class="icon-btn position-relative" routerLink="/chat" [title]="'nav.chat' | t">
+                  <i class="bi bi-chat-dots fs-5"></i>
+                  @if (unreadChats() > 0) {
+                    <span class="notif-dot">{{ unreadChats() > 9 ? '9+' : unreadChats() }}</span>
+                  }
+                </a>
+              </li>
+              <!-- Bell -->
               <li class="nav-item position-relative">
-                <button type="button" class="btn nav-link position-relative notif-btn" (click)="toggleNotif()">
+                <button type="button" class="icon-btn position-relative" (click)="toggleNotif()">
                   <i class="bi bi-bell fs-5"></i>
                   @if (unread() > 0) { <span class="notif-dot">{{ unread() > 9 ? '9+' : unread() }}</span> }
                 </button>
@@ -109,24 +120,29 @@ import { NotificationItem } from '../core/models';
                   </div>
                 }
               </li>
+              <!-- Avatar -->
               <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle user-menu-toggle d-flex align-items-center" data-bs-toggle="dropdown">
+                <a class="nav-link dropdown-toggle avatar-toggle d-flex align-items-center gap-2" data-bs-toggle="dropdown">
                   @if (auth.user()?.avatarUrl) {
-                    <img [src]="auth.user()!.avatarUrl" class="rounded-circle user-avatar" width="28" height="28" alt="">
+                    <img [src]="auth.user()!.avatarUrl" class="rounded-circle user-avatar" width="30" height="30" alt="">
                   } @else {
-                    <i class="bi bi-person-circle fs-4 user-avatar"></i>
+                    <div class="avatar-placeholder"><i class="bi bi-person-fill"></i></div>
                   }
-                  <span class="user-name d-none d-xl-inline" dir="ltr" lang="en">{{ auth.user()?.displayName }}</span>
                 </a>
-                <ul class="dropdown-menu dropdown-menu-end">
-                  <li><a class="dropdown-item" routerLink="/profile"><i class="bi bi-person me-2"></i>{{ 'nav.profile' | t }}</a></li>
-                  <li><hr class="dropdown-divider"></li>
-                  <li><button class="dropdown-item text-danger" (click)="logout()"><i class="bi bi-box-arrow-right me-2"></i>{{ 'nav.signOut' | t }}</button></li>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 mt-1">
+                  <li class="px-3 py-2 border-bottom">
+                    <div class="fw-semibold small">{{ auth.user()?.displayName }}</div>
+                    <div class="text-muted" style="font-size:.72rem">{{ auth.user()?.email }}</div>
+                  </li>
+                  <li><a class="dropdown-item py-2" routerLink="/profile"><i class="bi bi-person me-2 text-primary"></i>{{ 'nav.profile' | t }}</a></li>
+                  <li><a class="dropdown-item py-2" routerLink="/my-listings"><i class="bi bi-collection me-2 text-primary"></i>{{ 'nav.myListings' | t }}</a></li>
+                  <li><hr class="dropdown-divider my-1"></li>
+                  <li><button class="dropdown-item py-2 text-danger" (click)="logout()"><i class="bi bi-box-arrow-right me-2"></i>{{ 'nav.signOut' | t }}</button></li>
                 </ul>
               </li>
             } @else {
-              <li class="nav-item"><button class="btn btn-outline-primary btn-sm" (click)="authModal.open('login')">{{ 'nav.signIn' | t }}</button></li>
-              <li class="nav-item"><button class="btn btn-samsary btn-sm" (click)="authModal.open('register')">{{ 'nav.signUp' | t }}</button></li>
+              <li class="nav-item"><button class="btn btn-outline-primary btn-sm px-3" (click)="authModal.open('login')">{{ 'nav.signIn' | t }}</button></li>
+              <li class="nav-item"><button class="btn btn-samsary btn-sm px-3" (click)="authModal.open('register')">{{ 'nav.signUp' | t }}</button></li>
             }
           </ul>
         </div>
@@ -235,6 +251,22 @@ import { NotificationItem } from '../core/models';
   styles: [`
     .notif-btn { background: none; border: none; padding: .375rem .5rem; color: inherit; }
     .notif-btn:hover { opacity: .75; }
+    /* Unified icon button: chat + bell */
+    .icon-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px; border-radius: 999px;
+      background: none; border: none; color: var(--bs-body-color);
+      cursor: pointer; text-decoration: none; transition: background .15s;
+    }
+    .icon-btn:hover { background: rgba(var(--samsary-primary-rgb), .08); color: var(--samsary-primary); }
+    /* Avatar */
+    .avatar-toggle { text-decoration: none !important; }
+    .avatar-placeholder {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--samsary-gradient); color: #fff;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: .95rem; flex-shrink: 0;
+    }
     .notif-dot {
       position: absolute; top: 2px; inset-inline-end: 0;
       min-width: 16px; height: 16px; border-radius: 999px; padding: 0 3px;
