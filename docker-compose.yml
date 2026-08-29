@@ -108,6 +108,7 @@ services:
       Sms__AuthToken: "${SMS_AUTH_TOKEN}"
       Sms__FromNumber: "${SMS_FROM_NUMBER}"
       Seq__ApiKey: "${SEQ_API_KEY}"
+      Cors__Origins: "${CORS_ORIGINS}"
     ports:
       - "5013:8080" # call the API directly at http://localhost:5013 (optional)
     volumes:

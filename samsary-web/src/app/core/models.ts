@@ -76,6 +76,9 @@ export interface PublicUser {
   bio?: string;
   approvedListingsCount: number;
   memberSince?: string;
+  phone?: string;
+  email?: string;
+  country?: string;
 }
 
 export interface Review {

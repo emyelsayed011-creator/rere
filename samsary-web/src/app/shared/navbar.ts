@@ -376,6 +376,11 @@ export class NavbarComponent implements OnInit {
       const _ = this.rt.latestMessage();
       if (this.auth.isAuthenticated()) this.refreshChatUnread();
     });
+    // Refresh chat badge immediately when user reads a thread
+    effect(() => {
+      const _ = this.rt.chatThreadOpened();
+      if (this.auth.isAuthenticated()) this.refreshChatUnread();
+    });
   }
 
   ngOnInit() {
