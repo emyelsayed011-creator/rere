@@ -11,6 +11,7 @@ public class ThemeSettings
     [MaxLength(7)]  public string AccentColor   { get; set; } = "#c9991f";
     [MaxLength(200)] public string? LogoUrl     { get; set; }
     [MaxLength(80)]  public string? SiteName    { get; set; }
+    [MaxLength(80)]  public string? SiteNameAr  { get; set; }
     [MaxLength(50)]  public string FontFamily   { get; set; } = "Poppins";
     public int FontSizeBase { get; set; } = 16;
 

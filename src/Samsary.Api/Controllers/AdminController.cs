@@ -1,9 +1,11 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Samsary.Application.Common.Interfaces;
 using Samsary.Application.DTOs;
 using Samsary.Application.Features.Admin.Commands;
 using Samsary.Application.Features.Admin.Queries;
+using Samsary.Application.Features.Auth.Commands;
 using Samsary.Domain.Enums;
 using Samsary.Infrastructure.Persistence;
 
@@ -82,4 +84,14 @@ public class AdminController : ApiControllerBase
     [HttpDelete("moderators/{userId}")]
     public async Task<IActionResult> RemoveModerator(string userId, CancellationToken ct)
         => HandleResult(await _sender.Send(new RemoveModeratorCommand(userId), ct));
+
+    [HttpPost("users/create")]
+    public async Task<IActionResult> CreateUser(AdminCreateUserDto dto, CancellationToken ct)
+    {
+        var result = await _sender.Send(
+            new RegisterCommand(dto.Email, dto.Password, dto.DisplayName, dto.Phone), ct);
+        if (!result.IsSuccess) return HandleResult(result);
+        var user = result.Value!.User;
+        return Ok(new { id = user.Id, email = user.Email, displayName = user.DisplayName });
+    }
 }

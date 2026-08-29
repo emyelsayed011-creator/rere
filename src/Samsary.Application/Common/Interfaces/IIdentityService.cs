@@ -20,6 +20,8 @@ public interface IIdentityService
     Task<Result> ChangePasswordAsync(string userId, string currentPassword, string newPassword, CancellationToken cancellationToken = default);
     Task<Result> SendEmailVerificationAsync(string userId, CancellationToken cancellationToken = default);
     Task<Result> ConfirmEmailAsync(string userId, string token, CancellationToken cancellationToken = default);
+    Task<Result> ForgotPasswordAsync(string email, CancellationToken cancellationToken = default);
+    Task<Result> ResetPasswordAsync(string email, string token, string newPassword, CancellationToken cancellationToken = default);
 
     Task<bool> IsInRoleAsync(string userId, string role, CancellationToken cancellationToken = default);
     Task<Result> AddToRoleAsync(string userId, string role, CancellationToken cancellationToken = default);

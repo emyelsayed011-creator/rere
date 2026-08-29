@@ -1,31 +1,36 @@
 import { CanActivateFn, Router } from '@angular/router';
 import { inject } from '@angular/core';
 import { AuthService } from './auth.service';
+import { AuthModalService } from './auth-modal.service';
 import { ModeratorPermission } from './models';
 
 export const authGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
+  const modal = inject(AuthModalService);
   const router = inject(Router);
   if (auth.isAuthenticated()) return true;
-  router.navigateByUrl('/login');
-  return false;
+  modal.open('login');
+  return router.createUrlTree(['/']);
 };
 
 export const adminGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
+  const modal = inject(AuthModalService);
   if (auth.isAdmin()) return true;
-  router.navigateByUrl(auth.isAuthenticated() ? '/' : '/login');
-  return false;
+  if (auth.isAuthenticated()) return router.createUrlTree(['/']);
+  modal.open('login');
+  return router.createUrlTree(['/']);
 };
 
-/** Passes for both Admin and Moderator users. */
 export const staffGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
+  const modal = inject(AuthModalService);
   if (auth.isStaff()) return true;
-  router.navigateByUrl(auth.isAuthenticated() ? '/' : '/login');
-  return false;
+  if (auth.isAuthenticated()) return router.createUrlTree(['/']);
+  modal.open('login');
+  return router.createUrlTree(['/']);
 };
 
 /**

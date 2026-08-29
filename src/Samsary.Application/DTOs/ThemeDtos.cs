@@ -5,6 +5,7 @@ public record ThemeSettingsDto(
     string AccentColor,
     string? LogoUrl,
     string? SiteName,
+    string? SiteNameAr,
     string FontFamily,
     int FontSizeBase);
 
@@ -13,5 +14,6 @@ public record UpdateThemeDto(
     string AccentColor,
     string? LogoUrl,
     string? SiteName,
+    string? SiteNameAr,
     string FontFamily,
     int FontSizeBase);

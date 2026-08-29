@@ -198,12 +198,39 @@ public sealed class IdentityService : IIdentityService
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null) return Error.NotFound("User.NotFound", "User not found.");
 
-        // Decode the URL-safe base64 token back to the original format.
         var decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(token));
         var result = await _userManager.ConfirmEmailAsync(user, decodedToken);
-        return result.Succeeded
-            ? Result.Success()
-            : IdentityErrors("EmailConfirmation", result);
+        return result.Succeeded ? Result.Success() : IdentityErrors("EmailConfirmation", result);
+    }
+
+    public async Task<Result> ForgotPasswordAsync(string email, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByEmailAsync(email);
+        // Return success even if user not found — prevents email enumeration.
+        if (user is null) return Result.Success();
+
+        var rawToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(rawToken));
+        var link = $"https://samsary.local/reset-password?email={Uri.EscapeDataString(email)}&token={encodedToken}";
+        try
+        {
+            await _email.SendAsync(email, "Reset your Samsary password",
+                $"<p>Click the link below to reset your password:</p><p><a href='{link}'>{link}</a></p><p>If you didn't request this, ignore this email.</p>",
+                cancellationToken);
+        }
+        catch (Exception ex) { _logger.LogWarning(ex, "Failed to send password reset email to {Email}", email); }
+
+        return Result.Success();
+    }
+
+    public async Task<Result> ResetPasswordAsync(string email, string token, string newPassword, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user is null) return Error.NotFound("User.NotFound", "User not found.");
+
+        var decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(token));
+        var result = await _userManager.ResetPasswordAsync(user, decodedToken, newPassword);
+        return result.Succeeded ? Result.Success() : IdentityErrors("Password", result);
     }
 
     public async Task<bool> IsInRoleAsync(string userId, string role, CancellationToken cancellationToken = default)

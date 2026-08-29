@@ -254,6 +254,27 @@ const EN: Dict = {
   // Map
   'form.pickOnMap': 'Pick on map',
   'form.mapHint': 'Click the map to set the location, or drag the marker.',
+  'form.next': 'Next',
+  'form.back': 'Back',
+  'form.createdOk': 'Listing created successfully',
+  'auth.welcomeBack': 'Welcome back!',
+  'auth.emailInvalid': 'Enter a valid email address',
+
+  // Admin users - ban
+  'admin.banReason': 'Reason',
+  'admin.banReasonPlaceholder': 'Describe why this account is being suspended…',
+  'admin.banReasonHint': 'This reason will be shown to the user in their notification.',
+  'admin.banDuration': 'Duration',
+  'admin.banPermanent': 'Permanent ban',
+  'admin.hour': 'hour',
+  'admin.hours': 'hours',
+  'admin.days': 'days',
+  'admin.unbanConfirm': 'Lift the suspension for',
+  'admin.dashboard': 'Dashboard',
+
+  // Admin moderators - new user
+  'admin.modPickExisting': 'Pick existing user',
+  'admin.modCreateNew': 'Create new account',
 };
 
 const AR: Dict = {
@@ -505,6 +526,27 @@ const AR: Dict = {
   // Map
   'form.pickOnMap': 'اختر من الخريطة',
   'form.mapHint': 'اضغط على الخريطة لتحديد الموقع أو اسحب العلامة.',
+  'form.next': 'التالي',
+  'form.back': 'السابق',
+  'form.createdOk': 'تم إنشاء الإعلان بنجاح',
+  'auth.welcomeBack': 'مرحباً بعودتك!',
+  'auth.emailInvalid': 'أدخل بريداً إلكترونياً صحيحاً',
+
+  // Admin users - ban
+  'admin.banReason': 'السبب',
+  'admin.banReasonPlaceholder': 'اشرح سبب إيقاف هذا الحساب…',
+  'admin.banReasonHint': 'سيظهر هذا السبب للمستخدم في إشعاره.',
+  'admin.banDuration': 'المدة',
+  'admin.banPermanent': 'حظر دائم',
+  'admin.hour': 'ساعة',
+  'admin.hours': 'ساعات',
+  'admin.days': 'أيام',
+  'admin.unbanConfirm': 'رفع الإيقاف عن',
+  'admin.dashboard': 'لوحة التحكم',
+
+  // Admin moderators - new user
+  'admin.modPickExisting': 'اختر مستخدماً',
+  'admin.modCreateNew': 'إنشاء حساب جديد',
 };
 
 const DICTS: Record<Lang, Dict> = { en: EN, ar: AR };

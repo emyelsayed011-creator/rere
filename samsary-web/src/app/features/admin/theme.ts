@@ -2,6 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AdminTheme, ThemeService } from '../../core/theme.service';
 import { TranslatePipe } from '../../core/i18n.service';
+import { ApiService } from '../../core/api.service';
 
 @Component({
   selector: 'app-admin-theme',
@@ -22,27 +23,26 @@ import { TranslatePipe } from '../../core/i18n.service';
                 } @else {
                   <i class="bi bi-buildings-fill fs-3"></i>
                 }
-                <span class="fw-bold fs-5">{{ form.value.siteName || 'Samsary' }}</span>
+                <div>
+                  <div class="fw-bold">{{ form.value.siteName || 'Samsary' }}</div>
+                  @if (form.value.siteNameAr) {
+                    <div class="small opacity-75" dir="rtl">{{ form.value.siteNameAr }}</div>
+                  }
+                </div>
               </div>
               <p class="small opacity-75 mb-0">Preview — هكذا ستبدو المنصة</p>
             </div>
             <div class="p-4">
               <button class="btn w-100 text-white fw-semibold py-2 rounded-pill mb-2"
-                      [style]="'background:' + previewGradient()">
-                زر رئيسي
-              </button>
+                      [style]="'background:' + previewGradient()">زر رئيسي</button>
               <div class="row g-2">
                 <div class="col-6">
                   <div class="p-3 rounded text-white text-center small"
-                       [style]="'background:' + (form.value.primaryColor || '#1a4f7a')">
-                    Primary
-                  </div>
+                       [style]="'background:' + (form.value.primaryColor || '#1a4f7a')">Primary</div>
                 </div>
                 <div class="col-6">
                   <div class="p-3 rounded text-white text-center small"
-                       [style]="'background:' + (form.value.accentColor || '#c9991f')">
-                    Accent
-                  </div>
+                       [style]="'background:' + (form.value.accentColor || '#c9991f')">Accent</div>
                 </div>
               </div>
             </div>
@@ -56,17 +56,34 @@ import { TranslatePipe } from '../../core/i18n.service';
           <div class="card-body">
             <form [formGroup]="form" (ngSubmit)="save()">
 
-              <div class="mb-3">
-                <label class="form-label fw-medium">{{ 'admin.themeSiteName' | t }}</label>
-                <input class="form-control" formControlName="siteName" placeholder="Samsary">
+              <!-- Site name (bilingual) -->
+              <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                  <label class="form-label fw-medium">{{ 'admin.themeSiteName' | t }} (EN)</label>
+                  <input class="form-control" formControlName="siteName" placeholder="Samsary">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-medium">{{ 'admin.themeSiteName' | t }} (AR)</label>
+                  <input class="form-control" formControlName="siteNameAr" placeholder="سمسارة" dir="rtl">
+                </div>
               </div>
 
+              <!-- Logo upload -->
               <div class="mb-3">
                 <label class="form-label fw-medium">{{ 'admin.themeLogoUrl' | t }}</label>
-                <input class="form-control" formControlName="logoUrl" placeholder="https://...">
+                <div class="d-flex gap-2 align-items-center">
+                  <input class="form-control" formControlName="logoUrl" placeholder="https://...">
+                  <label class="btn btn-outline-secondary flex-shrink-0 mb-0" style="cursor:pointer">
+                    @if (logoUploading()) { <span class="spinner-border spinner-border-sm"></span> }
+                    @else { <i class="bi bi-upload"></i> }
+                    <input type="file" class="d-none" accept="image/*" (change)="uploadLogo($event)">
+                  </label>
+                </div>
                 <div class="form-text">{{ 'admin.themeLogoHint' | t }}</div>
+                @if (logoError()) { <div class="text-danger small mt-1">{{ logoError() }}</div> }
               </div>
 
+              <!-- Colors -->
               <div class="row g-3 mb-3">
                 <div class="col-6">
                   <label class="form-label fw-medium">{{ 'admin.themePrimary' | t }}</label>
@@ -84,6 +101,7 @@ import { TranslatePipe } from '../../core/i18n.service';
                 </div>
               </div>
 
+              <!-- Font -->
               <div class="mb-3">
                 <label class="form-label fw-medium">{{ 'admin.themeFont' | t }}</label>
                 <select class="form-select" formControlName="fontFamily">
@@ -122,16 +140,20 @@ import { TranslatePipe } from '../../core/i18n.service';
 export class AdminThemeComponent implements OnInit {
   private fb = inject(FormBuilder);
   private themeSvc = inject(ThemeService);
+  private api = inject(ApiService);
 
   saving = signal(false);
-  saved  = signal(false);
-  error  = signal<string | null>(null);
+  saved = signal(false);
+  error = signal<string | null>(null);
+  logoUploading = signal(false);
+  logoError = signal<string | null>(null);
 
   form = this.fb.nonNullable.group({
     primaryColor: ['#1a4f7a', [Validators.required, Validators.pattern(/^#[0-9a-fA-F]{6}$/)]],
     accentColor:  ['#c9991f', [Validators.required, Validators.pattern(/^#[0-9a-fA-F]{6}$/)]],
     logoUrl:      [''],
     siteName:     ['Samsary'],
+    siteNameAr:   ['سمسارة'],
     fontFamily:   ['Poppins'],
     fontSizeBase: [16, [Validators.min(12), Validators.max(22)]]
   });
@@ -145,6 +167,17 @@ export class AdminThemeComponent implements OnInit {
   ngOnInit() {
     const t = this.themeSvc.adminTheme();
     if (t) this.form.patchValue(t);
+  }
+
+  uploadLogo(ev: Event) {
+    const file = (ev.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    this.logoUploading.set(true);
+    this.logoError.set(null);
+    this.api.uploadThemeLogo(file).subscribe({
+      next: r => { this.form.patchValue({ logoUrl: r.url }); this.logoUploading.set(false); },
+      error: e => { this.logoError.set(e?.error?.detail || 'Upload failed.'); this.logoUploading.set(false); }
+    });
   }
 
   preview() {

@@ -13,3 +13,7 @@ public record UpdateProfileDto(string DisplayName, string? Bio, string? AvatarUr
     DateTime? DateOfBirth = null, string? Gender = null, string? Country = null, string? Phone = null);
 
 public record ChangePasswordDto(string CurrentPassword, string NewPassword);
+
+public record ResetPasswordDto(string Email, string Token, string NewPassword);
+
+public record ConfirmEmailDto(string UserId, string Token);

@@ -29,4 +29,16 @@ public class AuthController : ApiControllerBase
     [HttpPost("logout")]
     public async Task<IActionResult> Logout([FromBody] string refreshToken, CancellationToken ct)
         => HandleResult(await _sender.Send(new LogoutCommand(refreshToken), ct));
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] string email, CancellationToken ct)
+        => HandleResult(await _sender.Send(new ForgotPasswordCommand(email), ct));
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(ResetPasswordDto dto, CancellationToken ct)
+        => HandleResult(await _sender.Send(new ResetPasswordCommand(dto.Email, dto.Token, dto.NewPassword), ct));
+
+    [HttpPost("confirm-email")]
+    public async Task<IActionResult> ConfirmEmail(ConfirmEmailDto dto, CancellationToken ct)
+        => HandleResult(await _sender.Send(new ConfirmEmailCommand(dto.UserId, dto.Token), ct));
 }

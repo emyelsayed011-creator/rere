@@ -28,6 +28,7 @@ export interface AdminTheme {
   accentColor: string;
   logoUrl?: string;
   siteName?: string;
+  siteNameAr?: string;
   fontFamily: string;
   fontSizeBase: number;
 }

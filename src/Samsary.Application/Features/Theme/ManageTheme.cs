@@ -22,7 +22,7 @@ public sealed class GetThemeQueryHandler : IQueryHandler<GetThemeQuery, ThemeSet
     {
         var t = await _db.ThemeSettings.FirstOrDefaultAsync(ct)
                 ?? new ThemeSettings();
-        return new ThemeSettingsDto(t.PrimaryColor, t.AccentColor, t.LogoUrl, t.SiteName, t.FontFamily, t.FontSizeBase);
+        return new ThemeSettingsDto(t.PrimaryColor, t.AccentColor, t.LogoUrl, t.SiteName, t.SiteNameAr, t.FontFamily, t.FontSizeBase);
     }
 }
 
@@ -30,7 +30,7 @@ public sealed class GetThemeQueryHandler : IQueryHandler<GetThemeQuery, ThemeSet
 
 public sealed record UpdateThemeCommand(
     string PrimaryColor, string AccentColor, string? LogoUrl,
-    string? SiteName, string FontFamily, int FontSizeBase)
+    string? SiteName, string? SiteNameAr, string FontFamily, int FontSizeBase)
     : ICommand<Result<ThemeSettingsDto>>;
 
 public sealed class UpdateThemeCommandValidator : AbstractValidator<UpdateThemeCommand>
@@ -63,6 +63,7 @@ public sealed class UpdateThemeCommandHandler : ICommandHandler<UpdateThemeComma
         theme.AccentColor  = r.AccentColor;
         theme.LogoUrl      = r.LogoUrl;
         theme.SiteName     = r.SiteName;
+        theme.SiteNameAr   = r.SiteNameAr;
         theme.FontFamily   = r.FontFamily;
         theme.FontSizeBase = r.FontSizeBase;
         theme.UpdatedAt    = DateTime.UtcNow;
@@ -72,5 +73,5 @@ public sealed class UpdateThemeCommandHandler : ICommandHandler<UpdateThemeComma
     }
 
     private static ThemeSettingsDto ToDto(ThemeSettings t) => new(
-        t.PrimaryColor, t.AccentColor, t.LogoUrl, t.SiteName, t.FontFamily, t.FontSizeBase);
+        t.PrimaryColor, t.AccentColor, t.LogoUrl, t.SiteName, t.SiteNameAr, t.FontFamily, t.FontSizeBase);
 }

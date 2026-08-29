@@ -94,6 +94,18 @@ export class ApiService {
     return this.http.delete<void>(`${this.base}/admin/reviews/${id}`, { body: { reason } });
   }
 
+  // admin create user (for moderator panel)
+  adminCreateUser(body: { email: string; password: string; displayName: string; phone: string }) {
+    return this.http.post<{ id: string; email: string; displayName: string }>(`${this.base}/admin/users/create`, body);
+  }
+
+  // admin user search by query
+  adminSearchUsers(q: string) {
+    return this.http.get<any>(`${this.base}/admin/users`, {
+      params: new HttpParams().set('q', q).set('pageSize', 10)
+    });
+  }
+
   // ban
   adminBanUser(id: string, reason: string, durationHours: number | null) {
     return this.http.post<void>(`${this.base}/admin/users/${id}/ban`, { reason, durationHours });
@@ -138,6 +150,13 @@ export class ApiService {
   }
   adminDeleteAd(id: number) {
     return this.http.delete<void>(`${this.base}/advertisements/${id}`);
+  }
+
+  // theme logo upload via Cloudinary
+  uploadThemeLogo(file: File) {
+    const fd = new FormData();
+    fd.append('file', file);
+    return this.http.post<{ url: string }>(`${this.base}/theme/logo`, fd);
   }
 
   // consent

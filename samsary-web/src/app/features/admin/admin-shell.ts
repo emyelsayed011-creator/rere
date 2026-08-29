@@ -28,9 +28,6 @@ import { TranslatePipe } from '../../core/i18n.service';
             <a routerLink="moderators" routerLinkActive="active" class="list-group-item list-group-item-action border-0 py-3">
               <i class="bi bi-person-gear me-2"></i>{{ 'admin.moderators' | t }}
             </a>
-            <a routerLink="ads" routerLinkActive="active" class="list-group-item list-group-item-action border-0 py-3">
-              <i class="bi bi-megaphone me-2"></i>{{ 'admin.ads' | t }}
-            </a>
             <a routerLink="reviews" routerLinkActive="active" class="list-group-item list-group-item-action border-0 py-3">
               <i class="bi bi-star-half me-2"></i>{{ 'admin.reviews' | t }}
             </a>

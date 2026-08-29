@@ -1,9 +1,11 @@
 import { Component, inject, OnInit, effect } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../core/auth.service';
+import { AuthModalService } from '../core/auth-modal.service';
 import { RealtimeService } from '../core/realtime.service';
 import { ApiService } from '../core/api.service';
 import { I18nService, TranslatePipe } from '../core/i18n.service';
+import { ThemeService } from '../core/theme.service';
 
 @Component({
   selector: 'app-navbar',
@@ -14,7 +16,7 @@ import { I18nService, TranslatePipe } from '../core/i18n.service';
       <div class="container">
         <a class="navbar-brand navbar-brand-samsary" routerLink="/">
           <span class="navbar-brand-icon"><i class="bi bi-buildings-fill"></i></span>
-          <span class="navbar-brand-text">سمسارة</span>
+          <span class="navbar-brand-text">{{ siteName() }}</span>
         </a>
         <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
           <span class="navbar-toggler-icon"></span>
@@ -69,8 +71,12 @@ import { I18nService, TranslatePipe } from '../core/i18n.service';
                 </ul>
               </li>
             } @else {
-              <li class="nav-item"><a routerLink="/login" class="btn btn-outline-primary btn-sm">{{ 'nav.signIn' | t }}</a></li>
-              <li class="nav-item"><a routerLink="/register" class="btn btn-samsary btn-sm">{{ 'nav.signUp' | t }}</a></li>
+              <li class="nav-item">
+                <button type="button" class="btn btn-outline-primary btn-sm" (click)="authModal.open('login')">{{ 'nav.signIn' | t }}</button>
+              </li>
+              <li class="nav-item">
+                <button type="button" class="btn btn-samsary btn-sm" (click)="authModal.open('register')">{{ 'nav.signUp' | t }}</button>
+              </li>
             }
           </ul>
         </div>
@@ -80,9 +86,19 @@ import { I18nService, TranslatePipe } from '../core/i18n.service';
 })
 export class NavbarComponent implements OnInit {
   auth = inject(AuthService);
+  authModal = inject(AuthModalService);
   i18n = inject(I18nService);
+  private theme = inject(ThemeService);
   private rt = inject(RealtimeService);
   private api = inject(ApiService);
+
+  siteName() {
+    const t = this.theme.adminTheme();
+    if (!t) return 'سمسارة';
+    return this.i18n.lang() === 'ar'
+      ? (t.siteNameAr || t.siteName || 'سمسارة')
+      : (t.siteName || 'Samsary');
+  }
   unread = (() => {
     const s: { v: number } = { v: 0 };
     return Object.assign(() => s.v, { set: (n: number) => (s.v = n) });

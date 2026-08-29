@@ -30,61 +30,122 @@ interface PermissionMeta {
     @if (showAdd()) {
       <div class="card border-0 shadow-sm mb-4 animate-fade-up">
         <div class="card-body p-4">
-          <h6 class="fw-bold mb-3">{{ 'admin.addModerator' | t }}</h6>
-          <div class="row g-3 align-items-end">
-            <div class="col-md-5">
-              <label class="form-label small fw-semibold">{{ 'admin.modUserSearch' | t }}</label>
-              <input class="form-control" [(ngModel)]="addSearch"
-                     [placeholder]="'admin.modSearchPlaceholder' | t"
-                     (input)="searchUsers()">
-              @if (userResults().length) {
-                <div class="list-group mt-1 shadow-sm position-absolute z-3" style="width:calc(100% - 2rem)">
-                  @for (u of userResults(); track u.id) {
-                    <button class="list-group-item list-group-item-action py-2"
-                            (click)="selectUser(u)">
-                      <div class="fw-semibold small">{{ u.displayName }}</div>
-                      <div class="text-muted" style="font-size:.8rem">{{ u.email }}</div>
+          <!-- Mode toggle -->
+          <div class="d-flex gap-2 mb-4">
+            <button type="button" class="btn btn-sm"
+                    [class.btn-samsary]="addMode() === 'existing'"
+                    [class.btn-outline-secondary]="addMode() !== 'existing'"
+                    (click)="addMode.set('existing')">
+              <i class="bi bi-search me-1"></i>{{ 'admin.modPickExisting' | t }}
+            </button>
+            <button type="button" class="btn btn-sm"
+                    [class.btn-samsary]="addMode() === 'new'"
+                    [class.btn-outline-secondary]="addMode() !== 'new'"
+                    (click)="addMode.set('new')">
+              <i class="bi bi-person-plus me-1"></i>{{ 'admin.modCreateNew' | t }}
+            </button>
+          </div>
+
+          @if (addMode() === 'existing') {
+            <!-- Pick existing user -->
+            <div class="row g-3 align-items-start">
+              <div class="col-md-5 position-relative">
+                <label class="form-label small fw-semibold">{{ 'admin.modUserSearch' | t }}</label>
+                <input class="form-control" [(ngModel)]="addSearch"
+                       [placeholder]="'admin.modSearchPlaceholder' | t"
+                       (input)="searchUsers()" autocomplete="off">
+                @if (userResults().length) {
+                  <div class="list-group mt-1 shadow-sm position-absolute z-3" style="width:calc(100% - 1.5rem)">
+                    @for (u of userResults(); track u.id) {
+                      <button class="list-group-item list-group-item-action py-2" (click)="selectUser(u)">
+                        <div class="fw-semibold small">{{ u.displayName }}</div>
+                        <div class="text-muted" style="font-size:.8rem">{{ u.email }}</div>
+                      </button>
+                    }
+                  </div>
+                }
+                @if (selectedUser()) {
+                  <div class="d-flex align-items-center gap-2 mt-2 p-2 rounded bg-success-subtle">
+                    <i class="bi bi-check-circle-fill text-success"></i>
+                    <span class="small fw-semibold">{{ selectedUser()!.displayName }}</span>
+                    <span class="text-muted small">&lt;{{ selectedUser()!.email }}&gt;</span>
+                    <button class="btn btn-link btn-sm p-0 ms-auto text-danger" (click)="selectedUser.set(null)">
+                      <i class="bi bi-x"></i>
                     </button>
-                  }
-                </div>
-              }
-              @if (selectedUser()) {
-                <div class="d-flex align-items-center gap-2 mt-2 p-2 rounded bg-success-subtle">
-                  <i class="bi bi-check-circle-fill text-success"></i>
-                  <span class="small fw-semibold">{{ selectedUser()!.displayName }}</span>
-                  <span class="text-muted small">&lt;{{ selectedUser()!.email }}&gt;</span>
-                  <button class="btn btn-link btn-sm p-0 ms-auto text-danger" (click)="selectedUser.set(null)">
-                    <i class="bi bi-x"></i>
-                  </button>
-                </div>
-              }
-            </div>
-            <div class="col-md-7">
-              <label class="form-label small fw-semibold">{{ 'admin.modPermissions' | t }}</label>
-              <div class="d-flex flex-wrap gap-3">
-                @for (p of permMeta; track p.flag) {
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" [id]="'perm-' + p.flag"
-                           [checked]="hasAddPerm(p.flag)"
-                           (change)="toggleAddPerm(p.flag)">
-                    <label class="form-check-label small" [for]="'perm-' + p.flag">
-                      <i [class]="'bi ' + p.icon + ' me-1 text-primary'"></i>{{ p.label | t }}
-                    </label>
                   </div>
                 }
               </div>
+              <div class="col-md-7">
+                <label class="form-label small fw-semibold">{{ 'admin.modPermissions' | t }}</label>
+                <div class="d-flex flex-wrap gap-3">
+                  @for (p of permMeta; track p.flag) {
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" [id]="'perm-' + p.flag"
+                             [checked]="hasAddPerm(p.flag)" (change)="toggleAddPerm(p.flag)">
+                      <label class="form-check-label small" [for]="'perm-' + p.flag">
+                        <i [class]="'bi ' + p.icon + ' me-1 text-primary'"></i>{{ p.label | t }}
+                      </label>
+                    </div>
+                  }
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="d-flex gap-2 mt-3">
-            <button class="btn btn-samsary btn-sm" [disabled]="!selectedUser() || addPerms === 0 || saving()"
-                    (click)="createModerator()">
-              @if (saving()) { <span class="spinner-border spinner-border-sm me-2"></span> }
-              {{ 'common.save' | t }}
-            </button>
-            <button class="btn btn-outline-secondary btn-sm" (click)="cancelAdd()">{{ 'common.cancel' | t }}</button>
-          </div>
+            <div class="d-flex gap-2 mt-3">
+              <button class="btn btn-samsary btn-sm" [disabled]="!selectedUser() || addPerms === 0 || saving()"
+                      (click)="createModerator()">
+                @if (saving()) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                {{ 'common.save' | t }}
+              </button>
+              <button class="btn btn-outline-secondary btn-sm" (click)="cancelAdd()">{{ 'common.cancel' | t }}</button>
+            </div>
+          } @else {
+            <!-- Create new account -->
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold">{{ 'auth.displayName' | t }}</label>
+                <input class="form-control" [(ngModel)]="newUser.displayName" placeholder="Display Name">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold">{{ 'auth.email' | t }}</label>
+                <input class="form-control" type="email" [(ngModel)]="newUser.email" placeholder="email@example.com">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold">{{ 'auth.phone' | t }}</label>
+                <input class="form-control" type="tel" [(ngModel)]="newUser.phone" placeholder="+20 1xx xxx xxxx">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold">{{ 'auth.password' | t }}</label>
+                <input class="form-control" type="password" [(ngModel)]="newUser.password"
+                       placeholder="Min 8 chars, uppercase, digit, symbol">
+              </div>
+              <div class="col-12">
+                <label class="form-label small fw-semibold">{{ 'admin.modPermissions' | t }}</label>
+                <div class="d-flex flex-wrap gap-3">
+                  @for (p of permMeta; track p.flag) {
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" [id]="'new-perm-' + p.flag"
+                             [checked]="hasAddPerm(p.flag)" (change)="toggleAddPerm(p.flag)">
+                      <label class="form-check-label small" [for]="'new-perm-' + p.flag">
+                        <i [class]="'bi ' + p.icon + ' me-1 text-primary'"></i>{{ p.label | t }}
+                      </label>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+            <div class="d-flex gap-2 mt-3">
+              <button class="btn btn-samsary btn-sm"
+                      [disabled]="!newUser.email || !newUser.password || !newUser.displayName || addPerms === 0 || saving()"
+                      (click)="createNewUserModerator()">
+                @if (saving()) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                <i class="bi bi-person-plus me-1"></i>{{ 'admin.modCreateNew' | t }}
+              </button>
+              <button class="btn btn-outline-secondary btn-sm" (click)="cancelAdd()">{{ 'common.cancel' | t }}</button>
+            </div>
+          }
+
           @if (addError()) {
-            <div class="alert alert-danger alert-sm mt-3 mb-0 py-2">{{ addError() }}</div>
+            <div class="alert alert-danger mt-3 mb-0 py-2 small">{{ addError() }}</div>
           }
         </div>
       </div>
@@ -211,14 +272,18 @@ export class AdminModeratorsComponent implements OnInit {
   saving = signal(false);
   moderators = signal<Moderator[]>([]);
   showAdd = signal(false);
+  addMode = signal<'existing' | 'new'>('existing');
   editing = signal<Moderator | null>(null);
   addError = signal<string | null>(null);
 
-  // Add form state
+  // Add form state (existing user)
   addSearch = '';
   userResults = signal<any[]>([]);
   selectedUser = signal<any | null>(null);
   addPerms: number = 0;
+
+  // Add form state (new user)
+  newUser = { displayName: '', email: '', phone: '', password: '' };
 
   // Edit form state
   editPerms: number = 0;
@@ -269,6 +334,7 @@ export class AdminModeratorsComponent implements OnInit {
     this.addSearch = '';
     this.addPerms = 0;
     this.addError.set(null);
+    this.newUser = { displayName: '', email: '', phone: '', password: '' };
   }
 
   // ── Permission helpers ─────────────────────────────────────────────────────
@@ -283,6 +349,20 @@ export class AdminModeratorsComponent implements OnInit {
   }
 
   // ── CRUD ──────────────────────────────────────────────────────────────────
+  createNewUserModerator() {
+    if (!this.newUser.email || !this.newUser.password || !this.newUser.displayName || !this.addPerms) return;
+    this.saving.set(true); this.addError.set(null);
+    this.api.adminCreateUser(this.newUser).subscribe({
+      next: created => {
+        this.api.createModerator(created.id, this.addPerms as any).subscribe({
+          next: m => { this.moderators.update(list => [m, ...list]); this.saving.set(false); this.cancelAdd(); },
+          error: e => { this.addError.set(e?.error?.detail ?? this.i18n.t('common.failed')); this.saving.set(false); }
+        });
+      },
+      error: e => { this.addError.set(e?.error?.detail ?? this.i18n.t('common.failed')); this.saving.set(false); }
+    });
+  }
+
   createModerator() {
     const user = this.selectedUser();
     if (!user || !this.addPerms) return;

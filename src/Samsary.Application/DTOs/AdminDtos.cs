@@ -53,3 +53,5 @@ public record AdminMessageBodyDto(string Body);
 public record CreateModeratorRequestDto(string UserId, int Permissions);
 
 public record UpdateModeratorRequestDto(int Permissions);
+
+public record AdminCreateUserDto(string Email, string Password, string DisplayName, string Phone);
