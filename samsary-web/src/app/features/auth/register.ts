@@ -100,7 +100,7 @@ export class RegisterComponent {
 
   form = this.fb.nonNullable.group({
     displayName: ['', [Validators.required, Validators.maxLength(80)]],
-    phone: ['', [Validators.required, Validators.pattern(/^[\+]?[0-9\s\-\(\)]{7,20}$/)]],
+    phone: ['', [Validators.required, Validators.pattern(/^(\+?2)?01[0125][0-9]{8}$/)]],
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(8)]]
   });

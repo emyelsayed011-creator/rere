@@ -18,7 +18,7 @@ public sealed class UpdateProfileCommandValidator : AbstractValidator<UpdateProf
         RuleFor(x => x.Bio).MaximumLength(500);
         RuleFor(x => x.PhoneNumber)
             .NotEmpty().WithMessage("Phone number is required.")
-            .Matches("^[0-9+()\\-\\s]{7,20}$").WithMessage("Enter a valid phone number.");
+            .Matches(@"^(\+?2)?01[0125][0-9]{8}$").WithMessage("Enter a valid Egyptian phone number (e.g. 01006205467).");
     }
 }
 
