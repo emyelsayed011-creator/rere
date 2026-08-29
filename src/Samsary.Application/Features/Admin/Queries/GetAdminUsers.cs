@@ -26,7 +26,7 @@ public sealed class GetAdminUsersQueryHandler : IQueryHandler<GetAdminUsersQuery
         var total = await _users.CountAsync(new EmptySpecification<ApplicationUser>(), cancellationToken);
 
         var dtos = items
-            .Select(u => new AdminUserDto(u.Id, u.Email, u.DisplayName, u.IsBlocked, u.CreatedAt))
+            .Select(u => new AdminUserDto(u.Id, u.Email, u.DisplayName, u.IsBlocked, u.CreatedAt, u.BannedUntil))
             .ToList();
 
         return new PagedResult<AdminUserDto>(dtos, total, page, pageSize);

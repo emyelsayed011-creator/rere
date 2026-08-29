@@ -31,7 +31,8 @@ public record PendingListingDto(
     PendingListingOwnerDto Owner,
     IReadOnlyList<PendingListingMediaDto> Media);
 
-public record AdminUserDto(string Id, string? Email, string DisplayName, bool IsBlocked, DateTime CreatedAt);
+public record AdminUserDto(string Id, string? Email, string DisplayName, bool IsBlocked, DateTime CreatedAt,
+    DateTime? BannedUntil = null);
 
 public record SystemLogDto(
     long Id,

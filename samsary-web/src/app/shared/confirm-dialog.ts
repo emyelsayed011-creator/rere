@@ -9,9 +9,8 @@ import { TranslatePipe } from '../core/i18n.service';
   template: `
     @if (svc.visible()) {
       <!-- Backdrop -->
-      <div class="modal-backdrop fade show" style="z-index:1050" (click)="svc.dismiss()"></div>
-      <!-- Dialog -->
-      <div class="modal d-block" style="z-index:1055" tabindex="-1">
+      <div class="modal-backdrop fade show" style="position:fixed;inset:0;z-index:1050" (click)="svc.dismiss()"></div>
+      <div class="modal d-block" style="position:fixed;inset:0;z-index:1055" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-sm">
           <div class="modal-content border-0 shadow-lg rounded-3">
             <div class="modal-body p-4 text-center">

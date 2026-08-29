@@ -95,6 +95,27 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
             }
 
             <div class="card-body p-4">
+              <!-- Rejection reason — only visible to owner -->
+              @if (l.status === ListingStatus.Rejected && auth.user()?.id === l.ownerId) {
+                <div class="alert alert-danger py-2 mb-3 d-flex align-items-start gap-2">
+                  <i class="bi bi-x-circle-fill flex-shrink-0 mt-1"></i>
+                  <div>
+                    <div class="fw-semibold small">
+                      {{ i18n.lang() === 'ar' ? 'تم رفض هذا الإعلان' : 'This listing was rejected' }}
+                    </div>
+                    @if (l.rejectionReason) {
+                      <div class="small mt-1 opacity-85">
+                        <strong>{{ i18n.lang() === 'ar' ? 'السبب:' : 'Reason:' }}</strong>
+                        {{ l.rejectionReason }}
+                      </div>
+                    }
+                    <a [routerLink]="['/listings', l.id, 'edit']" class="btn btn-sm btn-outline-danger mt-2">
+                      <i class="bi bi-pencil me-1"></i>
+                      {{ i18n.lang() === 'ar' ? 'تعديل وإعادة الإرسال' : 'Edit & resubmit' }}
+                    </a>
+                  </div>
+                </div>
+              }
               <!-- Title + type badge -->
               <div class="d-flex justify-content-between align-items-start mb-2">
                 <div class="flex-grow-1">

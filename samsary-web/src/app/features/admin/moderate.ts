@@ -50,11 +50,6 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
                       <div class="fw-bold text-primary mt-1">{{ l.price | number }} {{ l.currency }}</div>
                     </div>
                     <div class="d-flex gap-2 flex-wrap">
-                      <button class="btn btn-sm btn-outline-secondary" (click)="toggleExpand(l.id)">
-                        <i class="bi" [class.bi-chevron-down]="expandedId() !== l.id"
-                           [class.bi-chevron-up]="expandedId() === l.id"></i>
-                        {{ expandedId() === l.id ? 'Hide' : 'Details' }}
-                      </button>
                       <button class="btn btn-success btn-sm" (click)="approveTarget.set(l)">
                         <i class="bi bi-check2 me-1"></i>{{ 'admin.approve' | t }}
                       </button>
@@ -66,25 +61,6 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
                 </div>
               </div>
 
-              @if (expandedId() === l.id) {
-                <div class="border-top mt-3 pt-3">
-                  @if (l.media?.length) {
-                    <div class="d-flex gap-2 flex-wrap mb-3">
-                      @for (m of l.media; track m.id) {
-                        <div style="width:100px;height:80px;position:relative">
-                          @if (m.mediaType === 1) {
-                            <img [src]="m.thumbnailUrl || m.url" class="rounded-2 object-fit-cover w-100 h-100" alt="">
-                          } @else {
-                            <video [src]="m.url" class="rounded-2 object-fit-cover w-100 h-100" preload="metadata"></video>
-                            <span class="position-absolute top-0 start-0 m-1 badge bg-warning text-dark" style="font-size:.6rem"><i class="bi bi-play-fill"></i></span>
-                          }
-                        </div>
-                      }
-                    </div>
-                  }
-                  <p class="text-body-secondary small mb-0" style="white-space:pre-line;line-height:1.6">{{ l.description }}</p>
-                </div>
-              }
             </div>
           </div>
         </div>
@@ -95,8 +71,8 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
 
     <!-- ── Approve confirm popup ── -->
     @if (approveTarget(); as l) {
-      <div class="modal-backdrop fade show" style="z-index:1040" (click)="approveTarget.set(null)"></div>
-      <div class="modal d-block" tabindex="-1" style="z-index:1050">
+      <div class="modal-backdrop fade show" style="position:fixed;inset:0;z-index:1040" (click)="approveTarget.set(null)"></div>
+      <div class="modal d-block" tabindex="-1" style="position:fixed;inset:0;z-index:1050">
         <div class="modal-dialog modal-dialog-centered modal-sm">
           <div class="modal-content border-0 shadow-lg rounded-3">
             <div class="modal-body p-4 text-center">
@@ -110,11 +86,13 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
               <p class="fw-semibold mt-2 mb-0">{{ l.title }}</p>
             </div>
             <div class="modal-footer border-0 pt-0 d-flex gap-2 justify-content-center pb-4">
-              <button class="btn btn-light px-4" (click)="approveTarget.set(null)">
+              <button class="btn btn-light px-4" (click)="approveTarget.set(null)" [disabled]="saving()">
                 {{ 'common.cancel' | t }}
               </button>
-              <button class="btn btn-success px-4" (click)="confirmApprove(l.id)">
-                <i class="bi bi-check2 me-1"></i>{{ 'admin.approve' | t }}
+              <button class="btn btn-success px-4" (click)="confirmApprove(l.id)" [disabled]="saving()">
+                @if (saving()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                @else { <i class="bi bi-check2 me-1"></i> }
+                {{ 'admin.approve' | t }}
               </button>
             </div>
           </div>
@@ -124,8 +102,8 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
 
     <!-- ── Reject popup with reason ── -->
     @if (rejectTarget(); as l) {
-      <div class="modal-backdrop fade show" style="z-index:1040" (click)="rejectTarget.set(null)"></div>
-      <div class="modal d-block" tabindex="-1" style="z-index:1050">
+      <div class="modal-backdrop fade show" style="position:fixed;inset:0;z-index:1040" (click)="rejectTarget.set(null)"></div>
+      <div class="modal d-block" tabindex="-1" style="position:fixed;inset:0;z-index:1050">
         <div class="modal-dialog modal-dialog-centered">
           <div class="modal-content border-0 shadow-lg rounded-3">
             <div class="modal-header border-0">
@@ -144,9 +122,11 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
                         [placeholder]="i18n.lang() === 'ar' ? 'سبب الرفض...' : 'Rejection reason...'"></textarea>
             </div>
             <div class="modal-footer border-0">
-              <button class="btn btn-light" (click)="rejectTarget.set(null)">{{ 'common.cancel' | t }}</button>
-              <button class="btn btn-danger px-4" (click)="confirmReject(l.id)" [disabled]="!rejectNote.trim()">
-                <i class="bi bi-x me-1"></i>{{ 'admin.confirmReject' | t }}
+              <button class="btn btn-light" (click)="rejectTarget.set(null)" [disabled]="saving()">{{ 'common.cancel' | t }}</button>
+              <button class="btn btn-danger px-4" (click)="confirmReject(l.id)" [disabled]="!rejectNote.trim() || saving()">
+                @if (saving()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                @else { <i class="bi bi-x me-1"></i> }
+                {{ 'admin.confirmReject' | t }}
               </button>
             </div>
           </div>
@@ -160,30 +140,31 @@ export class AdminModerateComponent implements OnInit {
   readonly i18n = inject(I18nService);
 
   items = signal<any[]>([]);
-  expandedId = signal<number | null>(null);
   approveTarget = signal<any | null>(null);
   rejectTarget = signal<any | null>(null);
   rejectNote = '';
+  saving = signal(false);
 
   ngOnInit() { this.load(); }
   load() { this.api.adminPending().subscribe(x => this.items.set(x)); }
 
-  toggleExpand(id: number) { this.expandedId.update(v => v === id ? null : id); }
-
   openReject(l: any) { this.rejectTarget.set(l); this.rejectNote = ''; }
 
   confirmApprove(id: number) {
-    this.api.adminApprove(id).subscribe(() => {
-      this.approveTarget.set(null);
-      this.load();
+    if (this.saving()) return;
+    this.saving.set(true);
+    this.api.adminApprove(id).subscribe({
+      next: () => { this.saving.set(false); this.approveTarget.set(null); this.load(); },
+      error: () => this.saving.set(false)
     });
   }
 
   confirmReject(id: number) {
-    if (!this.rejectNote.trim()) return;
-    this.api.adminReject(id, this.rejectNote.trim()).subscribe(() => {
-      this.rejectTarget.set(null);
-      this.load();
+    if (!this.rejectNote.trim() || this.saving()) return;
+    this.saving.set(true);
+    this.api.adminReject(id, this.rejectNote.trim()).subscribe({
+      next: () => { this.saving.set(false); this.rejectTarget.set(null); this.load(); },
+      error: () => this.saving.set(false)
     });
   }
 }

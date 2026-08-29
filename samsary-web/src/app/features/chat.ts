@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, effect } from '@angular/core';
+import { Component, ElementRef, inject, OnInit, signal, effect, ViewChild, AfterViewChecked } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -40,7 +40,7 @@ import { TranslatePipe } from '../core/i18n.service';
 
       <div class="col-md-8">
         @if (otherId()) {
-          <div class="chat-thread mb-2" #thread>
+          <div class="chat-thread mb-2" #thread style="overflow-y:auto;max-height:60vh">
             @for (m of messages(); track m.id) {
               <div class="d-flex" [class.justify-content-end]="m.senderId === me()">
                 <div class="chat-bubble" [class.me]="m.senderId === me()" [class.them]="m.senderId !== me()">
@@ -76,17 +76,20 @@ import { TranslatePipe } from '../core/i18n.service';
     </div>
   `
 })
-export class ChatComponent implements OnInit {
+export class ChatComponent implements OnInit, AfterViewChecked {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   private rt = inject(RealtimeService);
   auth = inject(AuthService);
+
+  @ViewChild('thread') threadEl?: ElementRef<HTMLDivElement>;
 
   conversations = signal<Conversation[]>([]);
   messages = signal<ChatMessage[]>([]);
   otherId = signal<string | null>(null);
   draft = '';
   me = () => this.auth.user()?.id ?? '';
+  private shouldScroll = false;
 
   constructor() {
     effect(() => {
@@ -95,8 +98,8 @@ export class ChatComponent implements OnInit {
       const other = this.otherId();
       if (other && (m.senderId === other || m.receiverId === other)) {
         this.messages.update(arr => [...arr, m]);
-        // Mark incoming message read immediately if we're in this conversation
         if (m.senderId === other) this.rt.markRead(m.id);
+        this.shouldScroll = true;
       }
       this.loadConversations();
     });
@@ -118,11 +121,14 @@ export class ChatComponent implements OnInit {
       if (id) {
         this.api.thread(id).subscribe(t => {
           this.messages.set(t);
+          this.shouldScroll = true;
           // Mark all unread incoming messages via SignalR so sender sees ✓✓
           const unreadIds = t.filter(m => m.senderId === id && !m.isRead).map(m => m.id);
           unreadIds.forEach(mid => this.rt.markRead(mid));
-          // Notify navbar to refresh chat badge immediately
-          if (unreadIds.length > 0) this.rt.notifyThreadRead();
+          // Always refresh conversations to clear unread badge in left panel
+          this.loadConversations();
+          // Notify navbar to refresh chat badge (even if 0 unread, clears stale count)
+          this.rt.notifyThreadRead();
         });
       } else {
         this.messages.set([]);
@@ -134,10 +140,19 @@ export class ChatComponent implements OnInit {
     this.api.conversations().subscribe(c => this.conversations.set(c));
   }
 
+  ngAfterViewChecked() {
+    if (this.shouldScroll) {
+      this.shouldScroll = false;
+      const el = this.threadEl?.nativeElement;
+      if (el) el.scrollTop = el.scrollHeight;
+    }
+  }
+
   async send() {
     const other = this.otherId();
     if (!other || !this.draft.trim()) return;
     await this.rt.sendMessage(other, this.draft.trim());
     this.draft = '';
+    this.shouldScroll = true;
   }
 }
