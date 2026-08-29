@@ -16,9 +16,11 @@ public sealed class UpdateProfileCommandValidator : AbstractValidator<UpdateProf
     {
         RuleFor(x => x.DisplayName).NotEmpty().MaximumLength(80);
         RuleFor(x => x.Bio).MaximumLength(500);
+        // Phone is optional — only validate format when provided
         RuleFor(x => x.PhoneNumber)
-            .NotEmpty().WithMessage("Phone number is required.")
-            .Matches(@"^(\+?2)?01[0125][0-9]{8}$").WithMessage("Enter a valid Egyptian phone number.");
+            .Matches(@"^(\+?2)?01[0125][0-9]{8}$")
+            .When(x => !string.IsNullOrWhiteSpace(x.PhoneNumber))
+            .WithMessage("Enter a valid Egyptian phone number.");
     }
 }
 

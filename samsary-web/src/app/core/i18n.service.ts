@@ -46,6 +46,7 @@ const EN: Dict = {
   'nav.signUp': 'Sign up',
   'nav.notifications': 'Notifications',
   'nav.language': 'Language',
+  'nav.menu': 'Menu',
 
   // Home
   'home.heroTitle': 'Buy, Sell & Rent Property',
@@ -329,6 +330,7 @@ const AR: Dict = {
   'nav.signUp': 'إنشاء حساب',
   'nav.notifications': 'الإشعارات',
   'nav.language': 'اللغة',
+  'nav.menu': 'القائمة',
 
   // Home
   'home.heroTitle': 'بيع، شراء وإيجار عقارات',

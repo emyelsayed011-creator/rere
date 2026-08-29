@@ -22,13 +22,13 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
     .listing-card:has(.sold-overlay) { opacity: .82; }
     /* Status badge — bottom-start corner of card image */
     .status-badge {
-      position: absolute; bottom: 8px; inset-inline-start: 8px;
-      font-size: .62rem; font-weight: 700; padding: 2px 8px;
-      border-radius: 999px; white-space: nowrap;
+      position: absolute; top: 34px; inset-inline-start: 8px;
+      font-size: .58rem; font-weight: 700; padding: 1px 7px;
+      border-radius: 999px;
       width: fit-content !important; height: auto !important; z-index: 2;
-      display: inline-flex; align-items: center;
+      display: inline-flex; align-items: center; line-height: 1.6;
     }
-    .status-pending { background: rgba(255,193,7,.92);  color: #000; }
+    .status-pending { background: rgba(255,193,7,.9);  color: #000; }
     .status-sold    { background: rgba(220,53,69,.9);   color: #fff; }
     .status-rented  { background: rgba(108,117,125,.9); color: #fff; }
   `],

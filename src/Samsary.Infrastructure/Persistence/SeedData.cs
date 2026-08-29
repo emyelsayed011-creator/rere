@@ -69,7 +69,7 @@ public static class SeedData
                 UserName = adminEmail,
                 Email = adminEmail,
                 EmailConfirmed = true,
-                DisplayName = "Administrator"
+                DisplayName = config["Seed:AdminDisplayName"] ?? "Samsarly"
             };
             await userMgr.CreateAsync(admin, adminPwd);
             await userMgr.AddToRoleAsync(admin, AdminRole);

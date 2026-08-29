@@ -128,7 +128,7 @@ export class ProfileComponent implements OnInit {
 
   form = this.fb.nonNullable.group({
     displayName: ['', [Validators.required, Validators.maxLength(80)]],
-    phoneNumber: ['', [Validators.required, Validators.pattern(/^(\+?2)?01[0125][0-9]{8}$/)]],
+    phoneNumber: ['', [Validators.pattern(/^(\+?2)?01[0125][0-9]{8}$/)]],
     bio: ['']
   });
 
@@ -161,7 +161,12 @@ export class ProfileComponent implements OnInit {
   save() {
     if (this.form.invalid) return;
     this.saving.set(true); this.saveMsg.set(null);
-    this.api.updateProfile(this.form.getRawValue()).subscribe({
+    const v = this.form.getRawValue();
+    this.api.updateProfile({
+      displayName: v.displayName,
+      bio: v.bio,
+      phone: v.phoneNumber || undefined
+    }).subscribe({
       next: u => {
         this.auth.updateLocalUser(u);
         this.saveOk.set(true);

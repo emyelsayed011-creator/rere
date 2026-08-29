@@ -16,17 +16,23 @@ public sealed class BroadcastNotificationCommandHandler : ICommandHandler<Broadc
 {
     private readonly IApplicationDbContext _db;
     private readonly INotificationService _notif;
+    private readonly ICurrentUser _currentUser;
 
-    public BroadcastNotificationCommandHandler(IApplicationDbContext db, INotificationService notif)
+    public BroadcastNotificationCommandHandler(
+        IApplicationDbContext db, INotificationService notif, ICurrentUser currentUser)
     {
         _db = db;
         _notif = notif;
+        _currentUser = currentUser;
     }
 
     public async Task<Result> Handle(BroadcastNotificationCommand request, CancellationToken cancellationToken)
     {
+        var senderId = _currentUser.UserId;
+
+        // Exclude the admin who is sending the broadcast
         var userIds = await _db.Users
-            .Where(u => !u.IsBlocked)
+            .Where(u => !u.IsBlocked && u.Id != senderId)
             .Select(u => u.Id)
             .ToListAsync(cancellationToken);
 

@@ -14,22 +14,24 @@ import { NotificationItem } from '../core/models';
   standalone: true,
   imports: [RouterLink, RouterLinkActive, TranslatePipe, DatePipe],
   template: `
-    <nav class="navbar navbar-expand-lg sticky-top">
+    <nav class="navbar sticky-top">
       <div class="container">
         <a class="navbar-brand navbar-brand-samsary" routerLink="/">
           <span class="navbar-brand-icon"><i class="bi bi-buildings-fill"></i></span>
           <span class="navbar-brand-text">{{ siteName() }}</span>
         </a>
-        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div id="nav" class="collapse navbar-collapse">
-          <ul class="navbar-nav me-auto">
+
+        <!-- Desktop nav links (hidden on mobile) -->
+        <div class="d-none d-lg-flex align-items-center flex-grow-1 ms-3">
+          <ul class="navbar-nav me-auto flex-row gap-1">
             <li class="nav-item"><a class="nav-link" routerLink="/listings" routerLinkActive="active">{{ 'nav.browse' | t }}</a></li>
             @if (auth.isAuthenticated()) {
               <li class="nav-item"><a class="nav-link" routerLink="/my-listings" routerLinkActive="active">{{ 'nav.myListings' | t }}</a></li>
-              <li class="nav-item"><a class="nav-link" routerLink="/chat" routerLinkActive="active">
+              <li class="nav-item"><a class="nav-link position-relative" routerLink="/chat" routerLinkActive="active">
                 <i class="bi bi-chat-dots me-1"></i>{{ 'nav.chat' | t }}
+                @if (unreadChats() > 0) {
+                  <span class="notif-dot" style="top:-2px;inset-inline-end:-4px">{{ unreadChats() > 9 ? '9+' : unreadChats() }}</span>
+                }
               </a></li>
             }
             @if (auth.isAdmin()) {
@@ -38,9 +40,9 @@ import { NotificationItem } from '../core/models';
               </a></li>
             }
           </ul>
-          <ul class="navbar-nav align-items-center gap-2">
+          <ul class="navbar-nav align-items-center gap-2 flex-row">
             <li class="nav-item">
-              <div class="lang-switch" role="group" [attr.aria-label]="'nav.language' | t">
+              <div class="lang-switch" role="group">
                 <button type="button" [class.active]="i18n.lang() === 'en'" (click)="i18n.setLang('en')">EN</button>
                 <button type="button" [class.active]="i18n.lang() === 'ar'" (click)="i18n.setLang('ar')">ع</button>
               </div>
@@ -52,13 +54,10 @@ import { NotificationItem } from '../core/models';
                 </a>
               </li>
               <li class="nav-item position-relative">
-                <button type="button" class="btn nav-link position-relative notif-btn"
-                        (click)="toggleNotif()" [attr.aria-label]="'nav.notifications' | t">
+                <button type="button" class="btn nav-link position-relative notif-btn" (click)="toggleNotif()">
                   <i class="bi bi-bell fs-5"></i>
                   @if (unread() > 0) { <span class="notif-dot">{{ unread() > 9 ? '9+' : unread() }}</span> }
                 </button>
-
-                <!-- Notifications panel -->
                 @if (notifOpen()) {
                   <div class="notif-backdrop" (click)="notifOpen.set(false)"></div>
                   <div class="notif-panel shadow-lg">
@@ -75,8 +74,7 @@ import { NotificationItem } from '../core/models';
                     </div>
                     <div class="notif-panel-body">
                       @for (n of notifItems(); track n.id) {
-                        <div class="notif-row" [class.unread]="!n.isRead" [class.has-link]="!!n.link"
-                             (click)="openNotif(n)">
+                        <div class="notif-row" [class.unread]="!n.isRead" [class.has-link]="!!n.link" (click)="openNotif(n)">
                           <div class="notif-row-icon">
                             <i class="bi"
                                [class.bi-check2-circle]="n.type===1" [class.text-success]="n.type===1"
@@ -118,7 +116,7 @@ import { NotificationItem } from '../core/models';
                   } @else {
                     <i class="bi bi-person-circle fs-4 user-avatar"></i>
                   }
-                  <span class="user-name d-none d-md-inline" dir="ltr" lang="en">{{ auth.user()?.displayName }}</span>
+                  <span class="user-name d-none d-xl-inline" dir="ltr" lang="en">{{ auth.user()?.displayName }}</span>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end">
                   <li><a class="dropdown-item" routerLink="/profile"><i class="bi bi-person me-2"></i>{{ 'nav.profile' | t }}</a></li>
@@ -127,17 +125,112 @@ import { NotificationItem } from '../core/models';
                 </ul>
               </li>
             } @else {
-              <li class="nav-item">
-                <button type="button" class="btn btn-outline-primary btn-sm" (click)="authModal.open('login')">{{ 'nav.signIn' | t }}</button>
-              </li>
-              <li class="nav-item">
-                <button type="button" class="btn btn-samsary btn-sm" (click)="authModal.open('register')">{{ 'nav.signUp' | t }}</button>
-              </li>
+              <li class="nav-item"><button class="btn btn-outline-primary btn-sm" (click)="authModal.open('login')">{{ 'nav.signIn' | t }}</button></li>
+              <li class="nav-item"><button class="btn btn-samsary btn-sm" (click)="authModal.open('register')">{{ 'nav.signUp' | t }}</button></li>
             }
           </ul>
         </div>
+
+        <!-- Mobile right actions + hamburger -->
+        <div class="d-flex d-lg-none align-items-center gap-2 ms-auto">
+          @if (auth.isAuthenticated()) {
+            <a routerLink="/listings/new" class="btn btn-samsary btn-sm px-2">
+              <i class="bi bi-plus-lg"></i>
+            </a>
+            <a class="nav-link position-relative p-1" routerLink="/chat">
+              <i class="bi bi-chat-dots fs-5"></i>
+              @if (unreadChats() > 0) { <span class="notif-dot" style="top:0;inset-inline-end:0">{{ unreadChats() > 9 ? '9+' : unreadChats() }}</span> }
+            </a>
+            <button type="button" class="btn nav-link position-relative notif-btn p-1" (click)="toggleNotif()">
+              <i class="bi bi-bell fs-5"></i>
+              @if (unread() > 0) { <span class="notif-dot">{{ unread() > 9 ? '9+' : unread() }}</span> }
+            </button>
+            @if (notifOpen()) {
+              <div class="notif-backdrop" (click)="notifOpen.set(false)"></div>
+              <div class="notif-panel shadow-lg" style="inset-inline-end:0;top:calc(100% + 8px)">
+                <div class="notif-panel-head d-flex align-items-center justify-content-between">
+                  <span class="fw-bold small">{{ 'notif.title' | t }}</span>
+                  <button class="btn-close btn-close-sm" (click)="notifOpen.set(false)"></button>
+                </div>
+                <div class="notif-panel-body">
+                  @for (n of notifItems(); track n.id) {
+                    <div class="notif-row" [class.unread]="!n.isRead" (click)="openNotif(n)">
+                      <div class="notif-row-body">
+                        <div class="notif-row-title">{{ n.title }}</div>
+                        <div class="notif-row-msg">{{ n.message }}</div>
+                      </div>
+                      @if (!n.isRead) { <div class="notif-unread-dot"></div> }
+                    </div>
+                  } @empty {
+                    <div class="text-center text-muted py-3 small">{{ 'notif.empty' | t }}</div>
+                  }
+                </div>
+                <a routerLink="/notifications" class="notif-panel-footer" (click)="notifOpen.set(false)">{{ i18n.lang() === 'ar' ? 'عرض الكل' : 'View all' }}</a>
+              </div>
+            }
+          }
+          <button class="hamburger-btn" (click)="mobileOpen.set(true)" [attr.aria-label]="'nav.menu' | t">
+            <i class="bi bi-list fs-4"></i>
+          </button>
+        </div>
       </div>
     </nav>
+
+    <!-- Mobile side drawer -->
+    @if (mobileOpen()) {
+      <div class="drawer-backdrop" (click)="mobileOpen.set(false)"></div>
+      <div class="drawer" [class.open]="mobileOpen()">
+        <div class="drawer-header">
+          <span class="navbar-brand-samsary">
+            <span class="navbar-brand-icon"><i class="bi bi-buildings-fill"></i></span>
+            <span class="navbar-brand-text">{{ siteName() }}</span>
+          </span>
+          <button class="btn-close" (click)="mobileOpen.set(false)"></button>
+        </div>
+        <div class="drawer-body">
+          <a class="drawer-link" routerLink="/listings" routerLinkActive="drawer-active" (click)="mobileOpen.set(false)">
+            <i class="bi bi-search me-2"></i>{{ 'nav.browse' | t }}
+          </a>
+          @if (auth.isAuthenticated()) {
+            <a class="drawer-link" routerLink="/my-listings" routerLinkActive="drawer-active" (click)="mobileOpen.set(false)">
+              <i class="bi bi-collection me-2"></i>{{ 'nav.myListings' | t }}
+            </a>
+            <a class="drawer-link position-relative" routerLink="/chat" routerLinkActive="drawer-active" (click)="mobileOpen.set(false)">
+              <i class="bi bi-chat-dots me-2"></i>{{ 'nav.chat' | t }}
+              @if (unreadChats() > 0) {
+                <span class="badge bg-danger ms-2 rounded-pill">{{ unreadChats() }}</span>
+              }
+            </a>
+            <a class="drawer-link" routerLink="/notifications" routerLinkActive="drawer-active" (click)="mobileOpen.set(false)">
+              <i class="bi bi-bell me-2"></i>{{ 'nav.notifications' | t }}
+              @if (unread() > 0) { <span class="badge bg-danger ms-2 rounded-pill">{{ unread() }}</span> }
+            </a>
+            <a class="drawer-link" routerLink="/profile" routerLinkActive="drawer-active" (click)="mobileOpen.set(false)">
+              <i class="bi bi-person me-2"></i>{{ 'nav.profile' | t }}
+            </a>
+          }
+          @if (auth.isAdmin()) {
+            <hr class="my-2">
+            <a class="drawer-link fw-semibold" routerLink="/admin" routerLinkActive="drawer-active" (click)="mobileOpen.set(false)">
+              <i class="bi bi-speedometer2 me-2"></i>{{ 'nav.admin' | t }}
+            </a>
+          }
+          <hr class="my-3">
+          <div class="d-flex gap-2 mb-3">
+            <button class="btn btn-sm flex-grow-1" [class.btn-primary]="i18n.lang()==='en'" [class.btn-outline-secondary]="i18n.lang()!=='en'" (click)="i18n.setLang('en')">English</button>
+            <button class="btn btn-sm flex-grow-1" [class.btn-primary]="i18n.lang()==='ar'" [class.btn-outline-secondary]="i18n.lang()!=='ar'" (click)="i18n.setLang('ar')">العربية</button>
+          </div>
+          @if (auth.isAuthenticated()) {
+            <button class="btn btn-outline-danger w-100" (click)="logout(); mobileOpen.set(false)">
+              <i class="bi bi-box-arrow-right me-2"></i>{{ 'nav.signOut' | t }}
+            </button>
+          } @else {
+            <button class="btn btn-outline-primary w-100 mb-2" (click)="authModal.open('login'); mobileOpen.set(false)">{{ 'nav.signIn' | t }}</button>
+            <button class="btn btn-samsary w-100" (click)="authModal.open('register'); mobileOpen.set(false)">{{ 'nav.signUp' | t }}</button>
+          }
+        </div>
+      </div>
+    }
   `,
   styles: [`
     .notif-btn { background: none; border: none; padding: .375rem .5rem; color: inherit; }
@@ -149,19 +242,14 @@ import { NotificationItem } from '../core/models';
       display: flex; align-items: center; justify-content: center;
       border: 2px solid #fff;
     }
-    .notif-backdrop {
-      position: fixed; inset: 0; z-index: 1040;
-    }
+    .notif-backdrop { position: fixed; inset: 0; z-index: 1040; }
     .notif-panel {
       position: absolute; inset-inline-end: 0; top: calc(100% + 8px); z-index: 1041;
       width: 340px; max-width: 95vw;
       background: var(--bs-body-bg); border-radius: 1rem;
       border: 1px solid var(--bs-border-color); overflow: hidden;
     }
-    .notif-panel-head {
-      padding: .75rem 1rem; border-bottom: 1px solid var(--bs-border-color);
-      background: var(--bs-tertiary-bg);
-    }
+    .notif-panel-head { padding: .75rem 1rem; border-bottom: 1px solid var(--bs-border-color); background: var(--bs-tertiary-bg); }
     .notif-panel-body { max-height: 360px; overflow-y: auto; }
     .notif-row {
       display: flex; align-items: flex-start; gap: .65rem;
@@ -173,19 +261,40 @@ import { NotificationItem } from '../core/models';
     .notif-row-icon { font-size: 1.1rem; flex-shrink: 0; padding-top: 2px; }
     .notif-row-body { flex: 1; min-width: 0; }
     .notif-row-title { font-size: .82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .notif-row-msg   { font-size: .75rem; color: var(--bs-secondary-color); margin-top: 1px;
-                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .notif-row-msg   { font-size: .75rem; color: var(--bs-secondary-color); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .notif-row-time  { font-size: .68rem; color: var(--bs-secondary-color); margin-top: 2px; }
-    .notif-unread-dot {
-      width: 7px; height: 7px; border-radius: 50%; background: var(--bs-primary);
-      flex-shrink: 0; margin-top: 6px;
-    }
-    .notif-panel-footer {
-      display: block; text-align: center; padding: .6rem;
-      font-size: .8rem; color: var(--bs-primary); text-decoration: none;
-      border-top: 1px solid var(--bs-border-color); background: var(--bs-tertiary-bg);
-    }
+    .notif-unread-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--bs-primary); flex-shrink: 0; margin-top: 6px; }
+    .notif-panel-footer { display: block; text-align: center; padding: .6rem; font-size: .8rem; color: var(--bs-primary); text-decoration: none; border-top: 1px solid var(--bs-border-color); background: var(--bs-tertiary-bg); }
     .notif-panel-footer:hover { text-decoration: underline; }
+    /* Mobile hamburger */
+    .hamburger-btn { background: none; border: 1px solid rgba(var(--samsary-primary-rgb),.2); border-radius: .5rem; padding: .25rem .55rem; color: var(--samsary-primary); cursor: pointer; }
+    /* Side drawer */
+    .drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1045; }
+    .drawer {
+      position: fixed; top: 0; inset-inline-start: 0; bottom: 0;
+      width: 280px; max-width: 85vw; z-index: 1046;
+      background: var(--bs-body-bg);
+      display: flex; flex-direction: column;
+      box-shadow: 4px 0 24px rgba(0,0,0,.18);
+      transform: translateX(-100%);
+      transition: transform .25s ease;
+    }
+    html[dir='rtl'] .drawer { inset-inline-start: auto; inset-inline-end: 0; transform: translateX(100%); }
+    .drawer.open { transform: translateX(0); }
+    .drawer-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.25rem; border-bottom: 1px solid var(--bs-border-color);
+      background: var(--bs-tertiary-bg);
+    }
+    .drawer-body { flex: 1; overflow-y: auto; padding: 1rem 1.25rem; }
+    .drawer-link {
+      display: flex; align-items: center; padding: .7rem .75rem;
+      border-radius: .65rem; color: var(--bs-body-color); text-decoration: none;
+      font-weight: 500; transition: background .12s; margin-bottom: .2rem;
+    }
+    .drawer-link:hover, .drawer-link.drawer-active {
+      background: var(--samsary-soft); color: var(--samsary-primary);
+    }
   `]
 })
 export class NavbarComponent implements OnInit {
@@ -199,6 +308,8 @@ export class NavbarComponent implements OnInit {
 
   notifOpen = signal(false);
   notifItems = signal<NotificationItem[]>([]);
+  unreadChats = signal(0);
+  mobileOpen = signal(false);
 
   siteName() {
     const t = this.theme.adminTheme();
@@ -217,18 +328,37 @@ export class NavbarComponent implements OnInit {
       if (this.auth.isAuthenticated()) {
         this.rt.connect();
         this.refreshUnread();
+        this.refreshChatUnread();
       } else {
         this.rt.disconnect();
         (this.unread as any).set(0);
+        this.unreadChats.set(0);
       }
     });
     effect(() => {
       const _ = this.rt.unreadDelta();
       if (this.auth.isAuthenticated()) this.refreshUnread();
     });
+    // Refresh chat badge whenever a new message arrives
+    effect(() => {
+      const _ = this.rt.latestMessage();
+      if (this.auth.isAuthenticated()) this.refreshChatUnread();
+    });
   }
 
-  ngOnInit() { if (this.auth.isAuthenticated()) this.refreshUnread(); }
+  ngOnInit() {
+    if (this.auth.isAuthenticated()) {
+      this.refreshUnread();
+      this.refreshChatUnread();
+    }
+  }
+
+  private refreshChatUnread() {
+    this.api.conversations().subscribe({
+      next: convs => this.unreadChats.set(convs.reduce((s, c) => s + (c.unreadCount ?? 0), 0)),
+      error: () => {}
+    });
+  }
 
   private refreshUnread() {
     this.api.notifications(true).subscribe({
