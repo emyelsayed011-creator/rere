@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Samsary.Application.Common.Interfaces;
@@ -15,11 +16,14 @@ public class JwtTokenService : IJwtTokenService
 {
     private readonly JwtSettings _settings;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IApplicationDbContext _db;
 
-    public JwtTokenService(IOptions<JwtSettings> options, UserManager<ApplicationUser> userManager)
+    public JwtTokenService(IOptions<JwtSettings> options, UserManager<ApplicationUser> userManager,
+        IApplicationDbContext db)
     {
         _settings = options.Value;
         _userManager = userManager;
+        _db = db;
     }
 
     public async Task<(string token, DateTime expiresAt)> CreateTokenAsync(ApplicationUser user)
@@ -36,6 +40,12 @@ public class JwtTokenService : IJwtTokenService
             new("email_verified", user.EmailConfirmed.ToString().ToLowerInvariant())
         };
         claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+
+        // Include moderator permissions so the frontend can show/hide sections without an extra API call
+        var modProfile = await _db.ModeratorProfiles
+            .FirstOrDefaultAsync(m => m.UserId == user.Id && m.IsActive);
+        if (modProfile is not null)
+            claims.Add(new Claim("mod_permissions", ((int)modProfile.Permissions).ToString()));
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.SigningKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
