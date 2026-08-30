@@ -67,11 +67,16 @@ public sealed class CreateModeratorCommandHandler : ICommandHandler<CreateModera
 
         await _db.SaveChangesAsync(ct);
 
-        await _notify.NotifyAsync(r.UserId, NotificationType.Admin,
-            "تم تعيينك مشرفاً / You've been assigned as Moderator",
-            "تم منحك صلاحيات مشرف على المنصة. يمكنك الآن الوصول إلى لوحة الإدارة.",
-            "/admin", NotificationChannel.InApp | NotificationChannel.Email,
-            ct: ct);
+        // Failure here is non-fatal — moderator was already persisted
+        try
+        {
+            await _notify.NotifyAsync(r.UserId, NotificationType.Admin,
+                "تم تعيينك مشرفاً / You've been assigned as Moderator",
+                "تم منحك صلاحيات مشرف على المنصة. يمكنك الآن الوصول إلى لوحة الإدارة.",
+                "/admin", NotificationChannel.InApp | NotificationChannel.Email,
+                ct: ct);
+        }
+        catch { /* notification failure must not roll back the moderator record */ }
 
         return new ModeratorDto(user.Id, user.Email!, user.DisplayName, user.AvatarUrl,
             r.Permissions, DateTime.UtcNow, true);

@@ -319,9 +319,7 @@ export class AdminModeratorsComponent implements OnInit {
   readonly permMeta: PermissionMeta[] = [
     { flag: ModeratorPermission.ManageListings, label: 'admin.permManageListings', icon: 'bi-house-check' },
     { flag: ModeratorPermission.ManageUsers,    label: 'admin.permManageUsers',    icon: 'bi-people-fill' },
-    { flag: ModeratorPermission.ManageReviews,  label: 'admin.permManageReviews',  icon: 'bi-star-half' },
     { flag: ModeratorPermission.ViewLogs,       label: 'admin.permViewLogs',       icon: 'bi-journal-text' },
-    { flag: ModeratorPermission.ManageAds,      label: 'admin.permManageAds',      icon: 'bi-megaphone' },
   ];
 
   ngOnInit() { this.load(); }

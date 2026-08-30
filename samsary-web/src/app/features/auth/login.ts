@@ -1,6 +1,6 @@
-﻿import { Component, inject, signal } from '@angular/core';
+﻿import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { TranslatePipe } from '../../core/i18n.service';
 
@@ -35,6 +35,12 @@ import { TranslatePipe } from '../../core/i18n.service';
         </div>
 
         <form [formGroup]="form" (ngSubmit)="submit()">
+          @if (bannedMsg()) {
+            <div class="alert alert-warning py-2 small mb-3 d-flex align-items-center gap-2">
+              <i class="bi bi-ban-fill"></i>
+              {{ bannedMsg() }}
+            </div>
+          }
           @if (error()) {
             <div class="alert alert-danger py-2 small mb-3 d-flex align-items-center gap-2">
               <i class="bi bi-exclamation-circle-fill"></i> {{ error() }}
@@ -109,18 +115,26 @@ import { TranslatePipe } from '../../core/i18n.service';
     html[dir='rtl'] .auth-eye { right:unset; left:12px; }
   `]
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   private fb = inject(FormBuilder);
   private auth = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   loading = signal(false);
   error = signal<string | null>(null);
+  bannedMsg = signal<string | null>(null);
   showPw = signal(false);
 
   form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(8)]]
   });
+
+  ngOnInit() {
+    if (this.route.snapshot.queryParamMap.get('banned') === '1') {
+      this.bannedMsg.set('تم تعليق حسابك. تواصل مع الدعم لمزيد من المعلومات.');
+    }
+  }
 
   async submit() {
     if (this.form.invalid) return;
