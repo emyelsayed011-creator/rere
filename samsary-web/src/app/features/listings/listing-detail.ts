@@ -272,7 +272,7 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
 
           <!-- Owner actions -->
           @if (auth.user()?.id === l.ownerId) {
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm mb-3">
               <div class="card-body p-3">
                 <a [routerLink]="['/listings', l.id, 'edit']" class="btn btn-outline-primary w-100 mb-2">
                   <i class="bi bi-pencil me-1"></i> {{ 'common.edit' | t }}
@@ -280,6 +280,41 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
                 <button class="btn btn-outline-danger w-100" (click)="remove(l.id)">
                   <i class="bi bi-trash me-1"></i> {{ 'common.delete' | t }}
                 </button>
+              </div>
+            </div>
+          }
+
+          <!-- Related listings -->
+          @if (related().length) {
+            <div>
+              <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                <i class="bi bi-grid-3x3-gap-fill text-primary" style="font-size:.9rem"></i>
+                {{ i18n.lang() === 'ar' ? 'إعلانات مشابهة' : 'Similar Listings' }}
+              </h6>
+              <div class="d-flex flex-column gap-2">
+                @for (r of related(); track r.id) {
+                  <a [routerLink]="['/listings', r.id]" class="related-card text-decoration-none">
+                    <div class="related-thumb">
+                      @if (r.media[0]) {
+                        <img [src]="r.media[0].thumbnailUrl || r.media[0].url" class="w-100 h-100 object-fit-cover" alt="">
+                      } @else {
+                        <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light text-muted">
+                          <i class="bi bi-image"></i>
+                        </div>
+                      }
+                      <span class="related-type-badge" [class.sell]="r.type===1" [class.rent]="r.type===2">
+                        {{ (r.type === 1 ? 'common.sale' : 'common.rent') | t }}
+                      </span>
+                    </div>
+                    <div class="related-info">
+                      <div class="related-title">{{ r.title }}</div>
+                      @if (r.location) {
+                        <div class="related-loc"><i class="bi bi-geo-alt me-1"></i>{{ r.location }}</div>
+                      }
+                      <div class="related-price">{{ r.price | number }} {{ r.currency }}</div>
+                    </div>
+                  </a>
+                }
               </div>
             </div>
           }
@@ -338,6 +373,27 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
       background: rgba(220,53,69,.08); border: 1px solid rgba(220,53,69,.25);
       color: #dc3545; font-size: .85rem; font-weight: 600; margin-bottom: .75rem;
     }
+    /* Related listings (YouTube-style) */
+    .related-card {
+      display: flex; gap: .65rem; border-radius: .65rem; overflow: hidden;
+      padding: .4rem; transition: background .12s; color: var(--bs-body-color);
+    }
+    .related-card:hover { background: var(--samsary-soft); }
+    .related-thumb {
+      position: relative; flex: 0 0 110px; height: 76px;
+      border-radius: .5rem; overflow: hidden; background: #f0f0f0;
+    }
+    .related-type-badge {
+      position: absolute; bottom: 4px; inset-inline-start: 4px;
+      font-size: .58rem; font-weight: 700; padding: 1px 6px; border-radius: 999px;
+      color: #fff; width: fit-content;
+    }
+    .related-type-badge.sell { background: #198754; }
+    .related-type-badge.rent { background: #0d6efd; }
+    .related-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: .15rem; }
+    .related-title { font-size: .82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .related-loc   { font-size: .72rem; color: var(--bs-secondary-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .related-price { font-size: .85rem; font-weight: 700; color: var(--samsary-primary); }
   `]
 })
 export class ListingDetailComponent implements OnInit, OnDestroy {
@@ -353,6 +409,7 @@ export class ListingDetailComponent implements OnInit, OnDestroy {
   @ViewChildren('vid') videoRefs!: QueryList<ElementRef<HTMLVideoElement>>;
 
   l = signal<Listing | null>(null);
+  related = signal<Listing[]>([]);
   message = '';
   sending = signal(false);
   mapCoords = signal<[number, number] | null>(null);
@@ -386,26 +443,26 @@ export class ListingDetailComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    const id = +this.route.snapshot.paramMap.get('id')!;
-    this.api.listing(id).subscribe(x => {
-      this.l.set(x);
-      if (x.location) setTimeout(() => this.initMap(x.location!), 100);
-
-      // IMPORTANT: the carousel/video elements only exist in the DOM once
-      // `l()` is set and Angular renders the `@if` block — which happens
-      // right here, asynchronously, after the HTTP call resolves. Doing
-      // this setup in ngAfterViewInit() is too early: that hook fires once,
-      // on the very first render, while `l()` is still null and the
-      // carousel hasn't been created yet — so it silently found nothing.
-      // Same 100ms-tick pattern as initMap() above: let Angular finish
-      // painting the new DOM, then wire up the first video + slide listener.
-      if (x.media.some(m => m.mediaType === MediaType.Video)) {
-        setTimeout(() => {
-          this.initVideoAt(0);
-          this.carouselEl = document.getElementById('listingCarousel');
-          this.carouselEl?.addEventListener('slide.bs.carousel', this.onSlide);
-        }, 100);
-      }
+    // Subscribe to param changes so clicking related listings reloads content
+    this.route.paramMap.subscribe(params => {
+      const id = +params.get('id')!;
+      this.l.set(null);
+      this.related.set([]);
+      this.map?.remove(); this.map = undefined;
+      this.api.listing(id).subscribe(x => {
+        this.l.set(x);
+        if (x.location) setTimeout(() => this.initMap(x.location!), 100);
+        this.api.listings({ categoryId: x.category.id, pageSize: 8 }).subscribe(r =>
+          this.related.set(r.items.filter(item => item.id !== x.id).slice(0, 6))
+        );
+        if (x.media.some(m => m.mediaType === MediaType.Video)) {
+          setTimeout(() => {
+            this.initVideoAt(0);
+            this.carouselEl = document.getElementById('listingCarousel');
+            this.carouselEl?.addEventListener('slide.bs.carousel', this.onSlide);
+          }, 100);
+        }
+      });
     });
   }
 
@@ -450,7 +507,7 @@ export class ListingDetailComponent implements OnInit, OnDestroy {
       });
       hls.loadSource(url);
       hls.attachMedia(videoEl);
-      hls.on(Hls.Events.ERROR, (_evt, data) => {
+      hls.on(Hls.Events.ERROR, (_evt: unknown, data: { fatal: boolean; type: string }) => {
         if (data.fatal) {
           // eslint-disable-next-line no-console
           console.error('hls.js fatal error, falling back to raw URL', data);

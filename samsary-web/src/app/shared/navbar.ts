@@ -35,7 +35,7 @@ import { NotificationItem } from '../core/models';
             @if (auth.isAuthenticated()) {
               <li class="nav-item"><a class="nav-link" routerLink="/my-listings" routerLinkActive="active">{{ 'nav.myListings' | t }}</a></li>
             }
-            @if (auth.isAdmin()) {
+            @if (auth.isStaff()) {
               <li class="nav-item"><a class="nav-link fw-semibold" routerLink="/admin" routerLinkActive="active">
                 <i class="bi bi-speedometer2 me-1"></i>{{ 'nav.admin' | t }}
               </a></li>

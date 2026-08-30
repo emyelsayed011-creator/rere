@@ -5,6 +5,7 @@ using Samsary.Application.Common.Messaging;
 using Samsary.Application.Common.Results;
 using Samsary.Domain.Entities;
 using Samsary.Domain.Enums;
+using Samsary.Domain.Repositories;
 
 namespace Samsary.Application.Features.Admin.Commands;
 
@@ -97,8 +98,16 @@ public sealed record UpdateModeratorPermissionsCommand(string UserId, ModeratorP
 public sealed class UpdateModeratorPermissionsCommandHandler : ICommandHandler<UpdateModeratorPermissionsCommand, ModeratorDto>
 {
     private readonly IApplicationDbContext _db;
+    private readonly INotificationService _notify;
+    private readonly IRefreshTokenRepository _tokens;
+    private readonly ILogger<UpdateModeratorPermissionsCommandHandler> _logger;
 
-    public UpdateModeratorPermissionsCommandHandler(IApplicationDbContext db) => _db = db;
+    public UpdateModeratorPermissionsCommandHandler(
+        IApplicationDbContext db, INotificationService notify,
+        IRefreshTokenRepository tokens, ILogger<UpdateModeratorPermissionsCommandHandler> logger)
+    {
+        _db = db; _notify = notify; _tokens = tokens; _logger = logger;
+    }
 
     public async Task<Result<ModeratorDto>> Handle(UpdateModeratorPermissionsCommand r, CancellationToken ct)
     {
@@ -110,6 +119,19 @@ public sealed class UpdateModeratorPermissionsCommandHandler : ICommandHandler<U
 
         profile.Permissions = r.Permissions;
         await _db.SaveChangesAsync(ct);
+
+        // Revoke tokens so the user re-logs in and gets the updated JWT claims immediately
+        await _tokens.RevokeAllForUserAsync(r.UserId, ct);
+
+        try
+        {
+            await _notify.NotifyAsync(r.UserId, NotificationType.Admin,
+                "تم تحديث صلاحياتك / Permissions Updated",
+                "تم تحديث صلاحياتك على المنصة. يرجى تسجيل الدخول مرة أخرى لتفعيل التغييرات.",
+                "/admin", NotificationChannel.InApp | NotificationChannel.Email,
+                ct: CancellationToken.None);
+        }
+        catch (Exception ex) { _logger.LogWarning(ex, "Failed to notify moderator permission update"); }
 
         return new ModeratorDto(
             profile.UserId, profile.User.Email!, profile.User.DisplayName,
@@ -124,15 +146,22 @@ public sealed class RemoveModeratorCommandHandler : ICommandHandler<RemoveModera
 {
     private readonly IApplicationDbContext _db;
     private readonly IIdentityService _identity;
+    private readonly INotificationService _notify;
+    private readonly IRefreshTokenRepository _tokens;
+    private readonly ILogger<RemoveModeratorCommandHandler> _logger;
 
-    public RemoveModeratorCommandHandler(IApplicationDbContext db, IIdentityService identity)
+    public RemoveModeratorCommandHandler(
+        IApplicationDbContext db, IIdentityService identity,
+        INotificationService notify, IRefreshTokenRepository tokens,
+        ILogger<RemoveModeratorCommandHandler> logger)
     {
-        _db = db; _identity = identity;
+        _db = db; _identity = identity; _notify = notify; _tokens = tokens; _logger = logger;
     }
 
     public async Task<Result> Handle(RemoveModeratorCommand r, CancellationToken ct)
     {
         var profile = await _db.ModeratorProfiles
+            .Include(m => m.User)
             .FirstOrDefaultAsync(m => m.UserId == r.UserId && m.IsActive, ct);
 
         if (profile is null) return Error.NotFound("Moderator.NotFound", "Moderator not found.");
@@ -141,6 +170,20 @@ public sealed class RemoveModeratorCommandHandler : ICommandHandler<RemoveModera
         await _db.SaveChangesAsync(ct);
 
         await _identity.RemoveFromRoleAsync(r.UserId, "Moderator", ct);
+
+        // Revoke tokens immediately so the ex-moderator loses access without waiting for JWT expiry
+        await _tokens.RevokeAllForUserAsync(r.UserId, ct);
+
+        try
+        {
+            await _notify.NotifyAsync(r.UserId, NotificationType.Admin,
+                "تم إنهاء صلاحياتك / Moderator Access Removed",
+                "تم سحب صلاحيات المشرف من حسابك.",
+                null, NotificationChannel.InApp | NotificationChannel.Email,
+                ct: CancellationToken.None);
+        }
+        catch (Exception ex) { _logger.LogWarning(ex, "Failed to notify moderator removal"); }
+
         return Result.Success();
     }
 }

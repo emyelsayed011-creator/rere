@@ -29,7 +29,7 @@ interface PermissionMeta {
     <!-- ── Add moderator panel ── -->
     @if (showAdd()) {
       <div class="card border-0 shadow-sm mb-4 animate-fade-up" style="overflow:visible">
-        <div class="card-body p-4">
+        <div class="card-body p-4" style="overflow:visible">
           <!-- Mode toggle -->
           <div class="d-flex gap-2 mb-4">
             <button type="button" class="btn btn-sm"
@@ -49,14 +49,14 @@ interface PermissionMeta {
           @if (addMode() === 'existing') {
             <!-- Pick existing user -->
             <div class="row g-3 align-items-start">
-              <div class="col-md-5 position-relative">
+              <div class="col-md-5" style="position:relative;z-index:10">
                 <label class="form-label small fw-semibold">{{ 'admin.modUserSearch' | t }}</label>
                 <input class="form-control" [(ngModel)]="addSearch"
                        [placeholder]="'admin.modSearchPlaceholder' | t"
                        (input)="searchUsers()" autocomplete="off">
                 @if (userResults().length) {
                   <div class="list-group mt-1 shadow-sm position-absolute"
-                       style="width:calc(100% - 1.5rem);z-index:1060;top:100%">
+                       style="width:100%;z-index:1060;top:100%">
                     @for (u of userResults(); track u.id) {
                       <button class="list-group-item list-group-item-action py-2" (click)="selectUser(u)">
                         <div class="fw-semibold small">{{ u.displayName }}</div>
@@ -251,10 +251,9 @@ interface PermissionMeta {
     <!-- ── Edit permissions modal ── -->
     @if (editing()) {
       <div class="modal-backdrop-overlay" (click)="editing.set(null)"></div>
-      <div class="position-fixed top-50 start-50 translate-middle z-5"
-           style="width:min(95vw,520px)">
+      <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1055;width:min(95vw,520px)">
         <div class="card shadow-lg border-0">
-          <div class="card-body p-4">
+          <div class="card-body p-4" style="overflow:visible">
             <h5 class="fw-bold mb-1">{{ 'admin.editPermissions' | t }}</h5>
             <p class="text-muted small mb-4">{{ editing()!.displayName }} &lt;{{ editing()!.email }}&gt;</p>
             <div class="d-flex flex-column gap-3">
@@ -288,7 +287,7 @@ interface PermissionMeta {
   `,
   styles: [`
     .modal-backdrop-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1040;
+      position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1050;
     }
   `]
 })
