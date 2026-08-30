@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Samsary.Application.Common.Interfaces;
 using Samsary.Application.Common.Messaging;
 using Samsary.Application.Common.Results;
@@ -27,11 +28,13 @@ public sealed class CreateModeratorCommandHandler : ICommandHandler<CreateModera
     private readonly ICurrentUser _admin;
     private readonly IIdentityService _identity;
     private readonly INotificationService _notify;
+    private readonly ILogger<CreateModeratorCommandHandler> _logger;
 
     public CreateModeratorCommandHandler(IApplicationDbContext db, ICurrentUser admin,
-        IIdentityService identity, INotificationService notify)
+        IIdentityService identity, INotificationService notify,
+        ILogger<CreateModeratorCommandHandler> logger)
     {
-        _db = db; _admin = admin; _identity = identity; _notify = notify;
+        _db = db; _admin = admin; _identity = identity; _notify = notify; _logger = logger;
     }
 
     public async Task<Result<ModeratorDto>> Handle(CreateModeratorCommand r, CancellationToken ct)
@@ -70,13 +73,17 @@ public sealed class CreateModeratorCommandHandler : ICommandHandler<CreateModera
         // Failure here is non-fatal — moderator was already persisted
         try
         {
+            // Use CancellationToken.None to avoid Wolverine transaction scope issues
             await _notify.NotifyAsync(r.UserId, NotificationType.Admin,
                 "تم تعيينك مشرفاً / You've been assigned as Moderator",
                 "تم منحك صلاحيات مشرف على المنصة. يمكنك الآن الوصول إلى لوحة الإدارة.",
                 "/admin", NotificationChannel.InApp | NotificationChannel.Email,
-                ct: ct);
+                ct: CancellationToken.None);
         }
-        catch { /* notification failure must not roll back the moderator record */ }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send moderator assignment notification to {UserId}", r.UserId);
+        }
 
         return new ModeratorDto(user.Id, user.Email!, user.DisplayName, user.AvatarUrl,
             r.Permissions, DateTime.UtcNow, true);
