@@ -13,6 +13,13 @@ export class ApiService {
 
   // categories
   categories() { return this.http.get<Category[]>(`${this.base}/categories`); }
+  adminCreateCategory(body: { name: string; nameAr?: string; slug: string; iconClass?: string }) {
+    return this.http.post<Category>(`${this.base}/categories`, body);
+  }
+  adminUpdateCategory(id: number, body: { name: string; nameAr?: string; slug: string; iconClass?: string }) {
+    return this.http.put<Category>(`${this.base}/categories/${id}`, body);
+  }
+  adminDeleteCategory(id: number) { return this.http.delete<void>(`${this.base}/categories/${id}`); }
 
   // listings
   listings(opts: {

@@ -28,7 +28,7 @@ interface PermissionMeta {
 
     <!-- ── Add moderator panel ── -->
     @if (showAdd()) {
-      <div class="card border-0 shadow-sm mb-4 animate-fade-up">
+      <div class="card border-0 shadow-sm mb-4 animate-fade-up" style="overflow:visible">
         <div class="card-body p-4">
           <!-- Mode toggle -->
           <div class="d-flex gap-2 mb-4">
@@ -55,7 +55,8 @@ interface PermissionMeta {
                        [placeholder]="'admin.modSearchPlaceholder' | t"
                        (input)="searchUsers()" autocomplete="off">
                 @if (userResults().length) {
-                  <div class="list-group mt-1 shadow-sm position-absolute z-3" style="width:calc(100% - 1.5rem)">
+                  <div class="list-group mt-1 shadow-sm position-absolute"
+                       style="width:calc(100% - 1.5rem);z-index:1060;top:100%">
                     @for (u of userResults(); track u.id) {
                       <button class="list-group-item list-group-item-action py-2" (click)="selectUser(u)">
                         <div class="fw-semibold small">{{ u.displayName }}</div>

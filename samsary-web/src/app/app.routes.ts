@@ -40,7 +40,8 @@ export const routes: Routes = [
       { path: 'reviews',    canActivate: [permissionGuard(ModeratorPermission.ManageReviews)],  loadComponent: () => import('./features/admin/reviews').then(m => m.AdminReviewsComponent) },
       { path: 'logs',       canActivate: [permissionGuard(ModeratorPermission.ViewLogs)],       loadComponent: () => import('./features/admin/logs').then(m => m.AdminLogsComponent) },
       { path: 'moderators', canActivate: [adminGuard], loadComponent: () => import('./features/admin/moderators').then(m => m.AdminModeratorsComponent) },
-      { path: 'theme',      canActivate: [adminGuard], loadComponent: () => import('./features/admin/theme').then(m => m.AdminThemeComponent) }
+      { path: 'theme',      canActivate: [adminGuard], loadComponent: () => import('./features/admin/theme').then(m => m.AdminThemeComponent) },
+      { path: 'categories',  canActivate: [adminGuard], loadComponent: () => import('./features/admin/categories').then(m => m.AdminCategoriesComponent) }
     ]
   },
 

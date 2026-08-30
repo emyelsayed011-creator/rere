@@ -42,11 +42,10 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
                             <img [src]="m.url" class="carousel-media-img" [alt]="'Photo ' + (i+1)">
                           } @else {
                             <!-- Only load src for active slide; preload=auto for smoother playback -->
-                            <video [src]="i === 0 ? videoUrl(m.url) : ''" [attr.data-src]="videoUrl(m.url)"
+                            <video [src]="i === 0 ? m.url : ''" [attr.data-src]="m.url"
                                    controls [poster]="m.thumbnailUrl || ''"
                                    class="carousel-media-img"
                                    preload="auto"
-                                   playsinline
                                    (play)="pauseOtherVideos($event)"></video>
                           }
                         </div>
@@ -425,13 +424,6 @@ export class ListingDetailComponent implements OnInit, OnDestroy {
     document.querySelectorAll('video').forEach(v => {
       if (v !== playing && !v.paused) v.pause();
     });
-  }
-
-  /** Inject Cloudinary quality optimization into video URLs for smoother streaming. */
-  videoUrl(url: string): string {
-    if (!url || !url.includes('cloudinary.com')) return url;
-    // Insert q_auto:eco,vc_auto transformation before the public_id
-    return url.replace('/upload/', '/upload/q_auto:eco,vc_auto/');
   }
 
   async sendMessage(receiverId: string, listingId: number) {

@@ -53,7 +53,7 @@ public static class SeedData
             await ctx.Database.EnsureCreatedAsync();
         }
 
-        foreach (var role in new[] { AdminRole, UserRole })
+        foreach (var role in new[] { AdminRole, ModeratorRole, UserRole })
         {
             if (!await roleMgr.RoleExistsAsync(role))
                 await roleMgr.CreateAsync(new IdentityRole(role));
