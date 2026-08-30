@@ -1,8 +1,13 @@
-﻿import { Component, ElementRef, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
+﻿// NOTE: this file requires the hls.js package.
+//   npm install hls.js
+//   npm install --save-dev @types/hls.js   (if not bundled with types already)
+
+import { Component, ElementRef, inject, OnDestroy, OnInit, signal, ViewChild, QueryList, ViewChildren } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import * as L from 'leaflet';
+import Hls from 'hls.js';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { ConfirmService } from '../../core/confirm.service';
@@ -41,11 +46,20 @@ import { I18nService, TranslatePipe } from '../../core/i18n.service';
                           @if (m.mediaType === MediaType.Image) {
                             <img [src]="m.url" class="carousel-media-img" [alt]="'Photo ' + (i+1)">
                           } @else {
-                            <!-- Only load src for active slide; preload=auto for smoother playback -->
-                            <video [src]="i === 0 ? m.url : ''" [attr.data-src]="m.url"
-                                   controls [poster]="m.thumbnailUrl || ''"
+                            <!--
+                              No [src] bound directly. The real source (HLS .m3u8
+                              or plain mp4) is attached lazily in the component via
+                              hls.js the first time this slide becomes active — see
+                              initVideoAt(). data-src just carries the intended URL.
+                            -->
+                            <video #vid
+                                   [attr.data-media-id]="m.id"
+                                   [attr.data-src]="videoUrl(m.url)"
+                                   controls
+                                   [poster]="m.thumbnailUrl || ''"
                                    class="carousel-media-img"
-                                   preload="auto"
+                                   preload="metadata"
+                                   playsinline
                                    (play)="pauseOtherVideos($event)"></video>
                           }
                         </div>
@@ -336,6 +350,7 @@ export class ListingDetailComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
 
   @ViewChild('mapEl') mapEl?: ElementRef<HTMLDivElement>;
+  @ViewChildren('vid') videoRefs!: QueryList<ElementRef<HTMLVideoElement>>;
 
   l = signal<Listing | null>(null);
   message = '';
@@ -346,6 +361,15 @@ export class ListingDetailComponent implements OnInit, OnDestroy {
   ListingStatus = ListingStatus;
 
   private map?: L.Map;
+
+  // Track hls.js instances so we can destroy them (they keep polling/buffering
+  // in the background otherwise — a real memory/network leak on route change).
+  private hlsInstances = new Map<HTMLVideoElement, Hls>();
+  private carouselEl: HTMLElement | null = null;
+  private onSlide = (e: Event) => {
+    const to = (e as any).to;
+    if (typeof to === 'number') this.initVideoAt(to);
+  };
 
   categoryName(c: Listing['category']) {
     return this.i18n.lang() === 'ar' ? (c.nameAr?.trim() || c.name) : c.name;
@@ -366,13 +390,87 @@ export class ListingDetailComponent implements OnInit, OnDestroy {
     this.api.listing(id).subscribe(x => {
       this.l.set(x);
       if (x.location) setTimeout(() => this.initMap(x.location!), 100);
+
+      // IMPORTANT: the carousel/video elements only exist in the DOM once
+      // `l()` is set and Angular renders the `@if` block — which happens
+      // right here, asynchronously, after the HTTP call resolves. Doing
+      // this setup in ngAfterViewInit() is too early: that hook fires once,
+      // on the very first render, while `l()` is still null and the
+      // carousel hasn't been created yet — so it silently found nothing.
+      // Same 100ms-tick pattern as initMap() above: let Angular finish
+      // painting the new DOM, then wire up the first video + slide listener.
+      if (x.media.some(m => m.mediaType === MediaType.Video)) {
+        setTimeout(() => {
+          this.initVideoAt(0);
+          this.carouselEl = document.getElementById('listingCarousel');
+          this.carouselEl?.addEventListener('slide.bs.carousel', this.onSlide);
+        }, 100);
+      }
     });
+  }
+
+  /** Attaches the real video source (HLS via hls.js, or a direct mp4 URL) the
+   *  first time the media item at `index` becomes the active carousel slide. */
+  private initVideoAt(index: number) {
+    const media = this.l()?.media;
+    const item = media?.[index];
+    if (!item || item.mediaType !== MediaType.Video) return;
+
+    const videoEl = document.querySelector<HTMLVideoElement>(
+      `#listingCarousel video[data-media-id="${item.id}"]`
+    );
+    if (!videoEl || videoEl.dataset['initialized'] === 'true') return;
+    videoEl.dataset['initialized'] = 'true';
+
+    const url = videoEl.dataset['src'] || '';
+    this.attachVideoSource(videoEl, url);
+  }
+
+  private attachVideoSource(videoEl: HTMLVideoElement, url: string) {
+    if (!url) return;
+
+    const isHls = url.includes('.m3u8');
+    if (!isHls) {
+      // Plain mp4/webm — just set it directly.
+      videoEl.src = url;
+      return;
+    }
+
+    // Safari (and iOS) can play HLS natively — no library needed there.
+    const canPlayNatively = videoEl.canPlayType('application/vnd.apple.mpegurl');
+    if (canPlayNatively) {
+      videoEl.src = url;
+      return;
+    }
+
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        maxBufferLength: 30,       // seconds of forward buffer — smooth without over-fetching
+        enableWorker: true,
+      });
+      hls.loadSource(url);
+      hls.attachMedia(videoEl);
+      hls.on(Hls.Events.ERROR, (_evt, data) => {
+        if (data.fatal) {
+          // eslint-disable-next-line no-console
+          console.error('hls.js fatal error, falling back to raw URL', data);
+          hls.destroy();
+          this.hlsInstances.delete(videoEl);
+          videoEl.src = url; // last-resort fallback
+        }
+      });
+      this.hlsInstances.set(videoEl, hls);
+    } else {
+      // No HLS support at all in this browser — fall back to the raw URL
+      // (Cloudinary can still serve it as progressive mp4 in most cases).
+      videoEl.src = url;
+    }
   }
 
   private parseCoords(loc: string): [number, number] | null {
     const parts = loc.split(',').map(s => parseFloat(s.trim()));
     if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])
-        && Math.abs(parts[0]) <= 90 && Math.abs(parts[1]) <= 180)
+      && Math.abs(parts[0]) <= 90 && Math.abs(parts[1]) <= 180)
       return [parts[0], parts[1]];
     return null;
   }
@@ -412,11 +510,18 @@ export class ListingDetailComponent implements OnInit, OnDestroy {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
-  ngOnDestroy() { this.map?.remove(); }
+  ngOnDestroy() {
+    this.map?.remove();
+    this.carouselEl?.removeEventListener('slide.bs.carousel', this.onSlide);
+    // Destroy every hls.js instance we created — otherwise they keep
+    // buffering/polling network requests in the background after navigating away.
+    this.hlsInstances.forEach(hls => hls.destroy());
+    this.hlsInstances.clear();
+  }
 
   pauseOtherVideos(event: Event) {
     // Pause all other video elements when one starts playing
@@ -424,6 +529,15 @@ export class ListingDetailComponent implements OnInit, OnDestroy {
     document.querySelectorAll('video').forEach(v => {
       if (v !== playing && !v.paused) v.pause();
     });
+  }
+
+  /** For plain (non-HLS) Cloudinary URLs, inject a quality/codec optimization.
+   *  HLS manifest URLs (.m3u8) are already fully optimized via the streaming
+   *  profile set server-side — don't touch those. */
+  videoUrl(url: string): string {
+    if (!url || !url.includes('cloudinary.com')) return url;
+    if (url.includes('.m3u8')) return url;
+    return url.replace('/upload/', '/upload/q_auto:eco,vc_auto/');
   }
 
   async sendMessage(receiverId: string, listingId: number) {

@@ -347,6 +347,26 @@ a {
   padding-bottom: .6rem;
 }
 
+    /* Ensure dropdown menus inside the navbar overlay the page instead of expanding it */
+    @media (min-width: 992px) {
+      .navbar .nav-item.dropdown { position: relative; }
+      /* hide dropdowns by default, position them absolute and show only when .show is applied */
+      .navbar .navbar-nav .dropdown-menu {
+        position: absolute !important;
+        top: calc(100% + 8px) !important;
+        right: 0 !important;
+        left: auto !important;
+        z-index: 2050 !important;
+        margin: 0;
+        display: none !important;
+      }
+      .navbar .navbar-nav .dropdown.show > .dropdown-menu,
+      .navbar .navbar-nav .dropdown-menu.show {
+        display: block !important;
+      }
+      html[dir='rtl'] .navbar .navbar-nav .dropdown-menu { right: auto !important; left: 0 !important; }
+    }
+
 .navbar .nav-link {
   font-weight: 500;
   border-radius: 999px;

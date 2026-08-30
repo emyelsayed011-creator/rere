@@ -300,6 +300,16 @@ import { NotificationItem } from '../core/models';
     .notif-panel-footer:hover { text-decoration: underline; }
     /* Mobile hamburger */
     .hamburger-btn { background: none; border: 1px solid rgba(var(--samsary-primary-rgb),.2); border-radius: .5rem; padding: .25rem .55rem; color: var(--samsary-primary); cursor: pointer; }
+    /* Ensure hamburger sits on the physical left side on small screens (regardless of RTL/LTR) */
+    .navbar { position: relative; }
+    @media (max-width: 991px) {
+      .hamburger-btn { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); z-index: 1050; }
+      .d-flex.d-lg-none { margin-inline-start: 0 !important; }
+      /* Make room for the absolute-positioned hamburger so other icons don't overlap */
+      .navbar .container { padding-left: 72px; }
+      /* Add space between the mobile + button and the brand */
+      .d-flex.d-lg-none > .btn.btn-samsary { margin-inline-start: 0.6rem; }
+    }
     /* Side drawer */
     .drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1045; }
     .drawer {
