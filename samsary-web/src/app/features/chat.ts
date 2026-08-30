@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, OnInit, signal, effect, ViewChild, AfterViewChecked } from '@angular/core';
+import { Component, ElementRef, inject, OnInit, signal, effect, ViewChild } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -76,7 +76,7 @@ import { TranslatePipe } from '../core/i18n.service';
     </div>
   `
 })
-export class ChatComponent implements OnInit, AfterViewChecked {
+export class ChatComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   private rt = inject(RealtimeService);
@@ -89,7 +89,6 @@ export class ChatComponent implements OnInit, AfterViewChecked {
   otherId = signal<string | null>(null);
   draft = '';
   me = () => this.auth.user()?.id ?? '';
-  private shouldScroll = false;
 
   constructor() {
     effect(() => {
@@ -99,7 +98,8 @@ export class ChatComponent implements OnInit, AfterViewChecked {
       if (other && (m.senderId === other || m.receiverId === other)) {
         this.messages.update(arr => [...arr, m]);
         if (m.senderId === other) this.rt.markRead(m.id);
-        this.shouldScroll = true;
+        // Live message while the thread is open — scroll down, animated.
+        this.scrollAfterRender(true);
       }
       this.loadConversations();
     });
@@ -121,7 +121,13 @@ export class ChatComponent implements OnInit, AfterViewChecked {
       if (id) {
         this.api.thread(id).subscribe(t => {
           this.messages.set(t);
-          this.shouldScroll = true;
+          // Initial load / conversation switch — jump straight to the
+          // bottom, no animation. Called directly here (instead of via a
+          // flag + ngAfterViewChecked, which wasn't firing reliably) so it
+          // runs exactly once, right after the DOM has a chance to render
+          // these messages — same proven pattern used for initMap()
+          // elsewhere in this app.
+          this.scrollAfterRender(false);
           // Mark all unread incoming messages via SignalR so sender sees ✓✓
           const unreadIds = t.filter(m => m.senderId === id && !m.isRead).map(m => m.id);
           unreadIds.forEach(mid => this.rt.markRead(mid));
@@ -140,12 +146,28 @@ export class ChatComponent implements OnInit, AfterViewChecked {
     this.api.conversations().subscribe(c => this.conversations.set(c));
   }
 
-  ngAfterViewChecked() {
-    if (this.shouldScroll) {
-      this.shouldScroll = false;
-      const el = this.threadEl?.nativeElement;
-      if (el) el.scrollTop = el.scrollHeight;
-    }
+  /** Waits a tick for Angular to finish painting the newly-set messages,
+   *  then scrolls the thread to the bottom. */
+  private scrollAfterRender(smooth: boolean) {
+    setTimeout(() => this.scrollToBottom(smooth), 50);
+  }
+
+  private scrollToBottom(smooth = false) {
+    const el = this.threadEl?.nativeElement;
+    if (!el) return;
+    // Wait a full frame so the browser has finished layout for the
+    // just-rendered @for messages before we measure scrollHeight.
+    requestAnimationFrame(() => {
+      if (smooth) {
+        try {
+          el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+        } catch {
+          el.scrollTop = el.scrollHeight;
+        }
+      } else {
+        el.scrollTop = el.scrollHeight; // instant, guaranteed
+      }
+    });
   }
 
   async send() {
@@ -153,6 +175,6 @@ export class ChatComponent implements OnInit, AfterViewChecked {
     if (!other || !this.draft.trim()) return;
     await this.rt.sendMessage(other, this.draft.trim());
     this.draft = '';
-    this.shouldScroll = true;
+    this.scrollAfterRender(true); // your own outgoing message — animate down
   }
 }

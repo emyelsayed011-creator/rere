@@ -236,8 +236,8 @@ const WIZARD_STEPS = [
             <div class="alert alert-danger py-2 small mt-3 mb-0">{{ error() }}</div>
           }
 
-          <!-- ── Navigation ──────────────────────────────────────── -->
-          @if (!created()) {
+          
+          @if (!created() || editing()) {
             <div class="d-flex mt-4 pt-3 border-top"
                  [class.justify-content-between]="step() > 1 && !editing()"
                  [class.justify-content-end]="step() === 1 || editing()">
@@ -443,9 +443,11 @@ const WIZARD_STEPS = [
             } @else {
               <div></div>
             }
-            <button class="btn btn-samsary" (click)="finish()">
-              <i class="bi bi-check2 me-1"></i>{{ 'form.submitReview' | t }}
-            </button>
+            @if (!editing()) {
+              <button type="button" class="btn btn-samsary" (click)="onSubmitReview()">
+                <i class="bi bi-check2 me-1"></i>{{ 'form.submitReview' | t }}
+              </button>
+            }
           </div>
         </div>
       </div>
@@ -618,7 +620,7 @@ export class ListingFormComponent implements OnInit, OnDestroy {
       // In edit mode only validate the core fields; location/phone may be absent on older listings
       const f = this.form.controls;
       return f.title.valid && f.description.valid && f.price.valid && f.currency.valid
-          && f.type.valid && f.categoryId.valid;
+        && f.type.valid && f.categoryId.valid;
     }
     return this.form.valid;
   }
@@ -926,5 +928,27 @@ export class ListingFormComponent implements OnInit, OnDestroy {
   }
 
   finish() { this.router.navigateByUrl('/my-listings'); }
+
+  // When user clicks "Submit for review" ensure any unsaved edits are saved first,
+  // then navigate to My Listings. If we're creating a new listing we must create it first.
+  onSubmitReview() {
+    // If listing is not created yet, attempt to save first
+    if (!this.created()) {
+      if (!this.canSave()) return;
+      this.save();
+      // wait until saving completes by polling the `saving` signal briefly
+      const checkSaved = () => {
+        if (this.saving()) {
+          setTimeout(checkSaved, 200);
+          return;
+        }
+        if (this.created()) this.finish();
+      };
+      setTimeout(checkSaved, 200);
+    } else {
+      // If already created (editing or after create) just finish
+      this.finish();
+    }
+  }
   cancel() { this.router.navigateByUrl('/my-listings'); }
 }
