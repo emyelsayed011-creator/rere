@@ -38,6 +38,7 @@ public class BanCheckMiddleware(RequestDelegate next)
                             type = "https://tools.ietf.org/html/rfc9110#section-15.5.4",
                             title = "Forbidden",
                             status = 403,
+                            code = "User.Banned",
                             detail = "Your account has been suspended."
                         });
                         return;

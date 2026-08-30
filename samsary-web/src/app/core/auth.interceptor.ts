@@ -20,9 +20,15 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authed).pipe(
     catchError((err: HttpErrorResponse) => {
-      if (err.status === 401 && auth.isAuthenticated()) {
-        auth.logout();
-        router.navigateByUrl('/login');
+      if (auth.isAuthenticated()) {
+        if (err.status === 401) {
+          auth.logout();
+          router.navigateByUrl('/login');
+        } else if (err.status === 403 && err.error?.code === 'User.Banned') {
+          // Account was suspended — force logout and redirect with message
+          auth.logout();
+          router.navigateByUrl('/login?banned=1');
+        }
       }
       return throwError(() => err);
     })
